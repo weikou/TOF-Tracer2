@@ -30,16 +30,21 @@ ylabel("intensity [a.u.]")
 using LsqFit
 @. model(x, p) = p[1]*exp((x-p[2])^2/p[3]) # Gaussian distribution
 #@. model(x, p) = p[1]/(p[1]^2 + (x-p[2])^2 ) # Lorentzian distribution, p[1]>0, -inf<p[2]<inf
-massCalCompounds = [37.028406, 55.038971, 282.118343]
 
 # select TIMEBIN intervals for mass axis calibration
 # -> click left and right of each peak to get the interval
 nSteps = length(massCalCompounds) # number of peaks for mass axis calibration
 gdata = Array{Float32}(undef,(2*nSteps),1)
-for i =1:2*nSteps
+for i =1:2:2*nSteps
+    println("please zoom to the correct position of the masscal compound. When happy with the zoom stage, click a random key")
+    readline()
+    println("now click in the plot to set the peak boundaries")
     gin = ginput()
     gdata[i] = gin[1][1]
     ax2.plot([gdata[i], gdata[i]], [minimum(avgSpectrum), maximum(avgSpectrum)],"r-.")
+    gin = ginput()
+    gdata[i+1] = gin[1][1]
+    ax2.plot([gdata[i+1], gdata[i+1]], [minimum(avgSpectrum), maximum(avgSpectrum)],"r-.")
 end
 # find interval indices
 maxPeakVal = Any[]
