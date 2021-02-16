@@ -1,9 +1,19 @@
 include("$(pwd())/startup.jl")
 
-fp = "./ExampleFiles/STOFDATA/" # All files in this path will be processed
+#fp = "./ExampleFiles/STOFDATA/" # All files in this path will be processed
+
+fp = "/media/wiebke/Extreme SSD/PSM_vs_PTR3/Data/apiTOFdata/CLOUD10/run1734_02/"
+
+
 filefilterRegexp = r"\.h5$"
-rf = "./ExampleFiles/STOFDATA/2017-05-24_12h50m39_NH4.h5"  # The mass scale from this file defines the mass scale of all
-masslist = MasslistFunctions.loadMasslist("./ExampleFiles/MASSLISTS/exampleMasslistSTOF.csv")
+#rf = "./ExampleFiles/STOFDATA/2017-05-24_12h50m39_NH4.h5"  # The mass scale from this file defines the mass scale of all
+
+rf = "$(fp)APi4_Data_2015.10.20-13h34m44s.h5"
+
+#masslist = MasslistFunctions.loadMasslist("./ExampleFiles/MASSLISTS/exampleMasslistSTOF.csv")
+
+masslist = MasslistFunctions.loadMasslist("$(fp)MassList_NO3-_AP_03-01-20.csv")
+
 cr = [37 137]
 
 # alternatively: use an auto generated masslist
@@ -27,7 +37,7 @@ correctMassScaleAndExtractSumSpec(
     rf,
     cr,
     filefilterRegexp=filefilterRegexp,
-    onlyUseAverages = false,
+    onlyUseAverages = true,
     plotControlMass = true,
     recalibInterval = 300,
     resolution = 1500,

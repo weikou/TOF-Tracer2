@@ -1,15 +1,27 @@
 
-
+using PyCall
+@pyimport matplotlib.colors as matcolors
+@pyimport matplotlib.colorbar as matcolorbar
 
 module PlotFunctions
 	import  ..MasslistFunctions
+	import  ..DatasetFunctions
 	using PyPlot
+	using CSV
+	using DataFrames
+	using Dates
 
-	export massDefectPlot, bananaPlot, addClickToggle
+	export massDefectPlot, bananaPlot, addClickToggle, plotStages
 
-	function massDefectPlot(masses, compositions, concentrations, colors, plotTitle, colorCodeTitle; dotSize = 10, maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false)
-	  figure()
+	function massDefectPlot(masses, compositions, concentrations, colors, plotTitle, colorCodeTitle, ax; dotSize = 10, dotbase = 2, maxMass = 450, maxDefect = 0.25, maxDIVmin = 100, sumformulas = false, negativeMD = true, minConc = 0, maxConc = 0, colormap = "haline", norm = 0)
+	  if (minConc == 0) & (maxConc == 0)
+	  	maxConc = DatasetFunctions.nanmax(concentrations)
+	  	minConc = maxConc/maxDIVmin
+	  else
+		maxDIVmin = maxConc/minConc
+          end
 
+	  #figure()
 	  h2o = MasslistFunctions.createCompound(H=2,O=1, Hplus=0)
 	  o = MasslistFunctions.createCompound(O=1, Hplus=0)
 
@@ -18,26 +30,121 @@ module PlotFunctions
 	    adduct = h2o
 	    if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions))
 	      m1 = m + adduct[1]
-	      plot([m, m1], [m-round(m), m1 - round(m1)], color="lightblue", zorder=1)
+	      #ax.plot([m, m1], [m-round(m), m1 - round(m1)], color="lightblue", zorder=1)
 	    end
 	    adduct = o
 	    if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions))
 	      m1 = m + adduct[1]
-	      plot([m, m1], [m-round(m), m1 - round(m1)], color="red", zorder=1)
+	      #ax.plot([m, m1], [m-round(m), m1 - round(m1)], color="red", zorder=1)
 	    end
 	    if sumformulas text(masses[i],masses[i]-round(masses[i]),sumFormulaStringFromCompositionArray(compositions[:,i]), color="grey", clip_on=true, verticalalignment="center", size=10, zorder=100) end
 	  end
+	  if norm != 0
+		  if negativeMD == true
+		    h = ax.scatter(masses, masses-round.(masses),dotSize*log.(concentrations./minConc), colors, zorder=10, linewidths=0.5, cmap=PyPlot.cm[colormap], norm=norm, alpha=0.9)
+		    ax.set_ylim(-maxDefect,maxDefect)
+		  else 
+		    h = ax.scatter(masses, masses-floor.(masses),dotSize*log.(concentrations./minConc), colors, zorder=10, linewidths=0.5, cmap=PyPlot.cm[colormap], norm=norm, alpha=0.9)
+		    ax.set_ylim(0,maxDefect)
+		  end
+	  else
+		  if negativeMD == true
+		    h = ax.scatter(masses, masses-round.(masses),dotSize*log.(concentrations./minConc), colors, zorder=10, linewidths=0.5, cmap=PyPlot.cm[colormap], alpha=0.9)
+		    ax.set_ylim(-maxDefect,maxDefect)
+		  else 
+		    h = ax.scatter(masses, masses-floor.(masses),dotSize*log.(concentrations./minConc), colors, zorder=10, linewidths=0.5, cmap=PyPlot.cm[colormap], alpha=0.9)
+		    ax.set_ylim(0,maxDefect)
+		  end
+	  end
+	  #cb=colorbar(h, ax = ax)
+	  #cb["ax"]["set_ylabel"](colorCodeTitle)
+	  #ax.set_xlabel("Mass [amu]")
+	  #ax.set_ylabel("Kendrick Mass Defect")
+	  #ax.set_title(plotTitle)
+	  #ax.grid("on")
 
-	  scatter(masses, masses-round.(masses),dotSize*log.(concentrations./minConc), colors, zorder=10, linewidths=0.5)
-	  xlim(0,maxMass)
-	  ylim(0,maxDefect)
-	  cb=colorbar()
-	  cb["ax"]["set_ylabel"](colorCodeTitle)
-	  xlabel("Mass [amu]")
-	  ylabel("Kendrick Mass Defect")
-	  title(plotTitle)
-	  grid("on")
+	  maxsize = dotSize*log(maxDIVmin)
+  	  msizes = dotSize.*log.(dotbase .^ (range(1e-5*maxDIVmin,stop=log(dotbase, maxDIVmin)+maxDIVmin*1e-5)))
+  	  mvalues = round.(minConc .* (dotbase .^ (range(1e-5*maxDIVmin,stop=log(dotbase,maxDIVmin)+maxDIVmin*1e-5))), sigdigits = 2)
+  	  for i=1:size(msizes)[1]
+  	    ax.scatter([],[],s=msizes[i], color = "k", label=mvalues[i])
+  	  end
+  	  ax.legend()
+	  return h
 	end
+
+
+function massDefectPlotVolatility(masses, compositions, concentrations, plotTitle, ax; dotSize = 10, dotbase = 2, maxMass = 450, maxDefect = 0.25, maxDIVmin = 100, sumformulas = false, negativeMD = true, minConc = 0, maxConc = 0, cmap = cmap, norm = norm)
+
+	# calculate log10Cstar300K
+	Nc = 25.0 	#basically const. which c-nr to start from 
+	bc = 0.475	#
+	bo = 2.3
+	bco = -0.3
+	nc = compositions[1,:]
+	no = compositions[6,:]
+
+	badd = Float64.(copy(nc))
+	for i = 1:length(nc)
+	  if 5<=nc[i]<=15
+	      badd[i] = 0.9
+	  elseif nc[i] > 15
+	      badd[i] = 1.13
+	  end
+	end
+
+	log10Cstar300K = ((Nc.-nc).*bc .- no.*(bo.-badd) .- 2 .* bco .*(nc.*no)./(nc.+no)) #log10(ug/m³)  nonlinear approx of sat gas concentration at 300K
+
+
+	if (minConc == 0) & (maxConc == 0)
+		maxConc = DatasetFunctions.nanmax(concentrations)
+		minConc = maxConc/maxDIVmin
+	else
+		maxDIVmin = maxConc/minConc
+	end
+
+	  #figure()
+	h2o = MasslistFunctions.createCompound(H=2,O=1, Hplus=0)
+	o = MasslistFunctions.createCompound(O=1, Hplus=0)
+
+	  for i=1:length(masses)
+	    m = masses[i]
+	    adduct = h2o
+	    if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions))
+	      m1 = m + adduct[1]
+	      #ax.plot([m, m1], [m-round(m), m1 - round(m1)], color="lightblue", zorder=1)
+	    end
+	    adduct = o
+	    if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions))
+	      m1 = m + adduct[1]
+	      #ax.plot([m, m1], [m-round(m), m1 - round(m1)], color="red", zorder=1)
+	    end
+	    if sumformulas text(masses[i],masses[i]-round(masses[i]),sumFormulaStringFromCompositionArray(compositions[:,i]), color="grey", clip_on=true, verticalalignment="center", size=10, zorder=100) end
+	  end
+	  if negativeMD == true
+	    h = ax.scatter(masses, masses-round.(masses),dotSize*log.(concentrations./minConc), log10Cstar300K, zorder=10, linewidths=0.5, cmap=cmap, norm=norm, alpha=0.9)
+	    ax.set_ylim(-maxDefect,maxDefect)
+	  else 
+	    h = ax.scatter(masses, masses-floor.(masses),dotSize*log.(concentrations./minConc), log10Cstar300K, zorder=10, linewidths=0.5, cmap=cmap, norm=norm, alpha=0.9)
+	    ax.set_ylim(0,maxDefect)
+	  end
+	  #cb=colorbar(h, ax = ax)
+	  #cb["ax"]["set_ylabel"](colorCodeTitle)
+	  #ax.set_xlabel("Mass [amu]")
+	  #ax.set_ylabel("Kendrick Mass Defect")
+	  #ax.set_title(plotTitle)
+	  #ax.grid("on")
+
+	  maxsize = dotSize*log(maxDIVmin)
+  	  msizes = dotSize.*log.(dotbase .^ (range(1e-5*maxDIVmin,stop=log(dotbase, maxDIVmin)+maxDIVmin*1e-5)))
+  	  mvalues = round.(minConc .* (dotbase .^ (range(1e-5*maxDIVmin,stop=log(dotbase,maxDIVmin)+maxDIVmin*1e-5))), sigdigits = 2)
+  	  for i=1:size(msizes)[1]
+  	    ax.scatter([],[],s=msizes[i], color = "k", label=mvalues[i])
+  	  end
+  	  ax.legend()
+	  return h
+	end
+
 
 	function bananaPlot(xbins,ybins,meshdataXY;subplotAx=0)
 	    println("Not implemented yet!!!")
@@ -75,6 +182,23 @@ module PlotFunctions
 		return [ axis.get_lines()[i].get_visible() for i in 1:length(axis.get_lines())]
 	end
 
+	function plotStages(file, axes, starttime, endtime; headerrow = 1)
+		data = DataFrame(CSV.File(file, header = headerrow))
+		if ("year" in names(data)) && ("month" in names(data)) && ("day" in names(data)) && ("hour" in names(data)) && ("minute" in names(data))
+			datetime = Dates.DateTime.(data.year, data.month, data.day, data.hour, data.minute)
+		elseif ("datetime" in names(data))
+			println(data.datetime[1])
+			println("What is the timestringformat of this datetime stamp?")
+			formatString = readline()
+			datetime = Dates.DateTime.(data.datetime, formatString)
+		elseif ("unixtime" in names(data))
+			datetime = Dates.unix2datetime.(data.unixtime)
+		end
+		show = starttime .< datetime .< endtime
+		vlines.(datetime[show], 0, 1)
+		axvline.(datetime[show])
+		text.(datetime[show]+Dates.Minute(5), axes.get_ylim()[2]*0.75 , string.(data.comments[show], "   "), rotation=90)
+	end
 end
 
 
@@ -262,5 +386,40 @@ module ExportFunctions
 	    millisecondsRemainder = Int(round((timestamp-days)*24*3600*1000))
 	    return Dates.DateTime(0,1,1,0,0,0)+Dates.Day(days)+Dates.Millisecond(millisecondsRemainder)-Dates.Day(1)
 	end
-
 end
+
+
+module ImportFunctions
+	using Dates
+	using CSV
+	using DataFrames
+	
+	export importFromCSV
+	
+	function importFromCSV(file; headerrow = 1)
+		data = DataFrame(CSV.File(file, header = headerrow))
+		if ("year" in names(data)) && ("month" in names(data)) && ("day" in names(data)) && ("hour" in names(data)) && ("minute" in names(data))
+			datetime = Dates.DateTime.(data.year, data.month, data.day, data.hour, data.minute)
+		elseif ("datetime" in names(data))
+			println(data.datetime[1])
+			println("What is the timestringformat of this datetime stamp?")
+			formatString = readline()
+			datetime = Dates.DateTime.(data.datetime, formatString)
+		elseif ("unixtime" in names(data))
+			datetime = Dates.unix2datetime.(data.unixtime)
+		end
+		return (datetime, data)
+	end
+end
+
+
+
+
+
+
+
+
+
+
+
+

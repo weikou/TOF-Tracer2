@@ -1,6 +1,6 @@
 push!(LOAD_PATH, pwd())
 import .MasslistFunctions
-
+H = MasslistFunctions.createCompound(H=1)
 CO2 = MasslistFunctions.createCompound(C=1, O=2)
 NH3 = MasslistFunctions.createCompound(N=1, H=3)
 PYRIDINE = MasslistFunctions.createCompound(N=1,H=5,C=5)
@@ -28,6 +28,8 @@ NORPINONALDEHYDEPAN = MasslistFunctions.createCompound(C=9, H=13, O=6, N=1)
 H3O = MasslistFunctions.createCompound(H=2, O=1)
 H3OH2O = MasslistFunctions.createCompound(H=4, O=2)
 H3OH2OH2O = MasslistFunctions.createCompound(H=6, O=3)
+H3OH2OH2OH2O = MasslistFunctions.createCompound(H=8, O=4)
+O2 = MasslistFunctions.createCompound(O=2, Hplus = 0)
 
 ########## Sulphur ###############
 DMS = MasslistFunctions.createCompound(C=2, H=6, S=1)
