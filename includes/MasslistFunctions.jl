@@ -76,7 +76,7 @@ module MasslistFunctions
 
 	masslistElements = ["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"]
 	masslistElementMasses = [massC, massC13, massH, massHplus, massN, massO, massO18, massS]
-	function createMassList(; C=0:0, O=0:0, N=0:0, S=0:0, nHplus=1, allowRadicals=false)
+	function createMassList(; C=0:1:0, O=0:0, N=0:0, S=0:0, nHplus=1, allowRadicals=false)
 	  masses = [37.02]
 	  masslistCompositions = [[0 0 4 1 0 2 0 0]]
 	  for nC in C
@@ -84,14 +84,33 @@ module MasslistFunctions
 	      for nS in S
 		for nO in O[O.<=nC+1]
 		  if allowRadicals
-		    possibleH = masslistPos(round(nC/2)*2-4):1:2*nC+2+nN*3
+		    possibleH = MasslistFunctions.masslistPos(round(nC/2)*2-4):1:2*nC+2+nN*3
 		  else
-		    possibleH = masslistPos(round(nC/2)*2-4):2:2*nC+2+nN*3
+		    possibleH = MasslistFunctions.masslistPos(round(nC/2)*2-4):2:2*nC+2+nN*3
 		  end
 		  if (isodd(nN))
-		    possibleH = possibleH + 1
+		    possibleH = possibleH .+ 1
 		  end
 		  for nH in possibleH
+		    append!(masses,nS*massS+nC*massC+nN*massN+nO*massO+nH*massH+nHplus*massHplus)
+		    push!(masslistCompositions, [nC nC13 nH nHplus nN nO nO18 nS])
+		  end
+		end
+	      end
+	    end
+	  end
+	  sortIndices = sortperm(masses)
+	  return masses[sortIndices],masslistElements,masslistElementMasses, masslistCompositions[sortIndices]
+	end
+
+	function createMassList2(; C=0:1:1, O=0:1:1, H=0:2:10, N=0:1, S=0:1, nHplus=1)
+	  masses = [37.02]
+	  masslistCompositions = [[0 0 4 1 0 2 0 0]]
+	  for nC in C
+	    for nN in N
+	      for nS in S
+		for nO in O[O.<=nC+1]
+		  for nH in H
 		    append!(masses,nS*massS+nC*massC+nN*massN+nO*massO+nH*massH+nHplus*massHplus)
 		    push!(masslistCompositions, [nC nC13 nH nHplus nN nO nO18 nS])
 		  end
