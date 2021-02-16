@@ -68,6 +68,14 @@ module InterpolationFunctions
 	  return y #convert(Array,y)
 	end
 
+	function interpolateMatrix_1D(x::AbstractArray, xAxis, yMatrix)
+		yMatrix_intpol = Array{typeof(yMatrix[1])}(undef,length(x), size(yMatrix)[2])
+	  	for i in 1:size(yMatrix)[2]
+			yMatrix_intpol[:,i] = interpolate(x, xAxis, yMatrix[:,i])
+		end
+		return yMatrix_intpol
+	end
+
 	function interpolate(x::AbstractArray, yAxis)
 	  y = Array{typeof(yAxis[1])}(undef,length(x))
 	  Threads.@threads for i = 1 : length(x)
@@ -135,9 +143,22 @@ module InterpolationFunctions
 	  [median(v[i:(i+ws-1)]) for i=1:(length(v)-ws+1)]
 	end
 
+
+	function nanmean(x::AbstractArray) 
+		if length(filter(!isnan, x)) > 0
+			return Statistics.mean(filter(!isnan,x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+
+	function nanmean(x::AbstractArray,d) 
+		return mapslices(nanmean,x;dims = d)
+	end
+
 	# Averaging multidimensional array in one dimension
 	# adapted from https://julialang.org/blog/2016/02/iteration
-	function averageSamples(data, averagePoints; dim=1)
+	function averageSamples(data, averagePoints; dim=1, ignoreNaNs = false)
 	    if averagePoints > 1
 		dt=false
 		if typeof(data[1]) == DateTime
@@ -153,7 +174,12 @@ module InterpolationFunctions
 		for Ipost in Rpost
 		  for Ipre in Rpre
 		    for i=1:len
-		      averaged[Ipre, i, Ipost] = Statistics.mean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		      	if ignoreNaNs
+				println(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+				averaged[Ipre, i, Ipost] = nanmean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		      	else
+		      		averaged[Ipre, i, Ipost] = Statistics.mean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+			end
 		    end
 		  end
 		end
