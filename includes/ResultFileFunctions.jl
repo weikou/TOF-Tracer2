@@ -5,7 +5,7 @@ module ResultFileFunctions
 	import  ..MasslistFunctions
 	import ..InterpolationFunctions
 
-	export MeasurementResult, joinResultsTime, joinResultsMasses, getTraces, getTimetraces, transposeStickCps, getNbrTraces, getTraceSamples, getNbrTraceSamples, findChangingMasses, findVaryingMasses, saturationFromComposition, getIndicesInTimeframe
+	export MeasurementResult, joinResultsTime, joinResultsMasses, loadResults, getTraces, getTimetraces, transposeStickCps, getNbrTraces, getTraceSamples, getNbrTraceSamples, findChangingMasses, findVaryingMasses, saturationFromComposition, getIndicesInTimeframe
 
 	#type MeasurementResult
 	mutable struct MeasurementResult
@@ -21,8 +21,7 @@ module ResultFileFunctions
 	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
 		if (firstResult.MasslistMasses == secondResult.MasslistMasses)
 		    firstResult.Times = vcat(firstResult.Times, secondResult.Times)
-		    firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
-		    firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
+		    firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
 		else
 		println("Masses did not match, could not merge results!")
 		end
