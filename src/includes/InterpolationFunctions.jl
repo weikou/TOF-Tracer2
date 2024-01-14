@@ -2,7 +2,7 @@ module InterpolationFunctions
 
 	using Dates
 	import Statistics
-	export interpolatedMax, interpolate, interpolatedSum, addArraysShiftedInterpolated, medianfilter, averageSamples, smooth
+	export interpolatedMax, interpolate, interpolatedSum, addArraysShiftedInterpolated, medianfilter, averageSamples, smooth, interpolateSelect, sortAverageSmoothInterpolate
 
 	function interpolatedMax(discreteMax, values)
 	  inta=values[discreteMax-1]
@@ -60,10 +60,18 @@ module InterpolationFunctions
 	  end
 	end
 
-	function interpolate(x::AbstractArray, xAxis, yAxis)
+	function interpolate(x::Vector, xAxis::Vector, yAxis::Vector)
 	  y = Array{typeof(yAxis[1])}(undef,length(x))
 	  Threads.@threads for i = 1 : length(x)
 	    y[i] = InterpolationFunctions.interpolate(x[i],xAxis,yAxis)
+	  end
+	  return y #convert(Array,y)
+	end
+
+	function interpolate(x::Vector, xAxis::Vector, yAxis::Matrix)
+	  y = Array{typeof(yAxis[1])}(undef,(length(x),size(yAxis,2)))
+	  for j = 1 : size(yAxis,2)
+	    y[:,j] = InterpolationFunctions.interpolate(x,xAxis,yAxis[:,j])
 	  end
 	  return y #convert(Array,y)
 	end
@@ -75,6 +83,66 @@ module InterpolationFunctions
 	  end
 	  return y #convert(Array,y)
 	end
+	
+	"""
+	    interpolateSelect(xfinal,xprior,yprior;selTimes=(DateTime(0),DateTime(3000)))
+	
+	Returns the interpolated array within a given DateTime range. 
+	"""
+	function interpolateSelect(xfinal,xprior,yprior;selTimes=(DateTime(0),DateTime(3000)))
+		yfinal = interpolate(xfinal[selTimes[1] .< xfinal .< selTimes[2]],
+			    xprior[selTimes[1] .< xprior .< selTimes[2]],
+			    yprior[selTimes[1] .< xprior .< selTimes[2]])
+		return yfinal		    
+	end
+
+    """
+        sortSelectAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Vector;returnSTdev=false)
+        
+    Returns a sorted, then smoothed and finally interpolated vector
+    """
+	function sortSelectAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Vector;returnSTdev=false,selectY=[-Inf,Inf])
+		smooth = Int32(floor(length(xprior)/length(xfinal)/2))
+		xpriorsel=xprior[selectY[1].<yprior.<selectY[2]]
+		if returnSTdev
+			avXprior, stdXprior = averageSamples(xpriorsel[sortperm(xpriorsel)],smooth;returnSTdev=true)
+			avYprior, stdYprior = averageSamples(yprior[selectY[1].<yprior.<selectY[2]][sortperm(xpriorsel)],smooth;returnSTdev=true)
+		else
+			avXprior = averageSamples(xpriorsel[sortperm(xpriorsel)],smooth)
+			avYprior = averageSamples(yprior[selectY[1].<yprior.<selectY[2]][sortperm(xpriorsel)],smooth)
+		end
+		yfinal = interpolate(xfinal,avXprior,avYprior)
+		if returnSTdev
+			yfinal_stderr = interpolate(xfinal,avXprior,stdYprior)./sqrt(smooth)
+			return (yfinal, yfinal_stderr)
+		else
+			return yfinal
+		end
+	end
+
+    """
+        sortAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Matrix;returnSTdev=true)
+        
+    Returns a sorted, then smoothed and finally interpolated matrix 
+    """
+	function sortAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Matrix;returnSTdev=true)
+		smooth = Int32(floor(length(xprior)/length(xfinal)/2))
+		if returnSTdev
+			(avXprior, stdXprior) = averageSamples(xprior[sortperm(xprior)],smooth;returnSTdev=true)
+			(avYprior, stdYprior) = averageSamples(yprior[sortperm(xprior),:],smooth;returnSTdev=true)
+		else
+			avXprior = averageSamples(xprior[sortperm(xprior)],smooth)
+			avYprior = averageSamples(yprior[sortperm(xprior),:],smooth)
+		end
+		yfinal = interpolate(xfinal,avXprior,avYprior)
+		if returnSTdev
+			yfinal_stderr = interpolate(xfinal,avXprior,stdYprior)./sqrt(smooth)
+			return (yfinal, yfinal_stderr)
+		else
+			return yfinal
+		end
+	end
+
 
 	function interpolatedSum(startX::AbstractFloat, endX::AbstractFloat, xAxis, yAxis)
 	  firstCompleteIndex = searchsortedfirst(xAxis, startX)
@@ -135,34 +203,47 @@ module InterpolationFunctions
 	  [median(v[i:(i+ws-1)]) for i=1:(length(v)-ws+1)]
 	end
 
-	# Averaging multidimensional array in one dimension
-	# adapted from https://julialang.org/blog/2016/02/iteration
-	function averageSamples(data, averagePoints; dim=1)
+    """
+        averageSamples(data, averagePoints; dim=1, returnSTdev = false)
+	
+	Averages multidimensional arrays in one dimension (dims), adapted from https://julialang.org/blog/2016/02/iteration.
+	Returns the averaged (smoothed) array, if returnSTdev = false.
+	Returns a tuple containing the averaged (smoothed) array and an array containing the standard deviation, if returnSTdev = true.
+	"""
+	function averageSamples(data, averagePoints; dim=1, returnSTdev = false)
 	    if averagePoints > 1
-		dt=false
-		if typeof(data[1]) == DateTime
-		    data = Dates.datetime2unix.(data)
-		    dt=true
-		end
-		len = Int64(floor(size(data,dim)/averagePoints))
-		sz = [size(data)...]
-		sz[[dim...]] .= len
-		averaged = Array{eltype(data)}(undef, sz...)
-		Rpre = CartesianIndices(size(data)[1:dim-1])
-		Rpost = CartesianIndices(size(data)[dim+1:end])
-		for Ipost in Rpost
-		  for Ipre in Rpre
-		    for i=1:len
-		      averaged[Ipre, i, Ipost] = Statistics.mean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		    dt=false
+		    if typeof(data[1]) == DateTime
+		        data = Dates.datetime2unix.(data)
+		        dt=true
 		    end
-		  end
-		end
-		if dt
-		    averaged = Dates.unix2datetime.(averaged)
-		end
-		return averaged
+		    len = Int64(floor(size(data,dim)/averagePoints))
+		    sz = [size(data)...]
+		    sz[[dim...]] .= len
+		    averaged = Array{eltype(data)}(undef, sz...)
+		    stdev = Array{eltype(data)}(undef, sz...)
+		    Rpre = CartesianIndices(size(data)[1:dim-1])
+		    Rpost = CartesianIndices(size(data)[dim+1:end])
+		    for Ipost in Rpost
+		      for Ipre in Rpre
+		        for i=1:len
+		          averaged[Ipre, i, Ipost] = Statistics.mean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		          if returnSTdev
+		          	stdev[Ipre, i, Ipost] = Statistics.std(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		          end
+		        end
+		      end
+		    end
+		    if dt
+		        averaged = Dates.unix2datetime.(averaged)
+		    end
+		    if returnSTdev
+			    return (averaged, stdev)
+		    else
+			    return averaged
+		    end
 	    else
-		return data
+		    return data
 	    end
 	end
 
