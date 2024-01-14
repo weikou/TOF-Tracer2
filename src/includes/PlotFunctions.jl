@@ -4,18 +4,32 @@ module PlotFunctions
 	import ..ResultFileFunctions
 	import ..InterpolationFunctions
 	using PyPlot
+    using PyCall
 	using HDF5
 	using Dates
+	using CSV
+	using DataFrames
 	import Statistics
+    using TOFTracer2
 
-	export massDefectPlot, bananaPlot, addClickToggle, plotTracesFromHDF5
+	export massDefectPlot, bananaPlot, addClickToggle, plotTracesFromHDF5, matplotlib2datetime, scrollAddTraces
 
 	"""
-	    massDefectPlot(masses, compositions, concentrations, colors, plotTitle, colorCodeTitle; kwargs...)
+	    massDefectPlot(masses, compositions, concentrations, colors; kwargs ...)
 
 	returns a figure, showing the data (a collection of exact masses and their corresponding concentrations) as a massdefect plot.
+
+	keyword agrument default values (and expected types) for adjusting the plot optics:
+	-------
+	plotTitle = " ",
+	colorCodeTitle = " ",
+	dotSize = 10 (float),
+	maxMass = 450 (float),
+	maxDefect = 0.25 (float),
+	minConc = 0.02 (float),
+	sumformulas = false (boolean)
 	"""
-	function massDefectPlot(masses, compositions, concentrations, colors, plotTitle, colorCodeTitle; dotSize = 10, maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false)
+	function massDefectPlot(masses, compositions, concentrations, colors; plotTitle = " ", colorCodeTitle = " ", dotSize = 10, maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false)
 	  fig = figure()
 
 	  h2o = MasslistFunctions.createCompound(H=2,O=1, Hplus=0)
@@ -61,9 +75,25 @@ module PlotFunctions
 	"""
 	    plotTracesFromHDF5(file, massesToPlot; kwargs...)
 
-	expects a result file from TOFTracer2 processing (*.hdf5) and an array of masses to plot. 
-	
-	returns a figure, showing the time traces of the given masses. Shows only file-averages without background correction and no smooting as default.
+	expects a result file from TOFTracer2 processing (*.hdf5) and an array of masses to plot.
+
+	kwargs standard settings:
+	-------
+    plotHighTimeRes = false,
+    smoothing = 1,
+    backgroundSubstractionMode = 0,
+    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+    timedelay = Dates.Hour(0),
+    isobarToPlot = 0,
+    plotsymbol = ".-",
+    plotFittedInsteadOfSummed = true,
+    timeFrame2plot=(DateTime(0),DateTime(3000)),
+    timezone = "UTC",
+    signalunit = "CPS",
+    ion = "all"
+
+	returns a figure and axis, showing the time traces of the given masses and loaded MeasurementResult struct.
+	Shows only file-averages without background correction and no smooting as default.
 	"""
 	function plotTracesFromHDF5(file, massesToPlot;
 			    plotHighTimeRes = false,
@@ -73,24 +103,32 @@ module PlotFunctions
 			    timedelay = Dates.Hour(0),
 			    isobarToPlot = 0,
 			    plotsymbol = ".-",
-			    plotFittedInsteadOfSummed = true
+			    plotFittedInsteadOfSummed = true,
+			    timeFrame2plot=(DateTime(0),DateTime(3000)),
+			    timezone = "UTC",
+			    signalunit = "CPS",
+			    ion = "all"
 			    )
-		measResult = ResultFileFunctions.loadResults(file, 
-							     massesToLoad=massesToPlot, 
-							     useAveragesOnly=!plotHighTimeRes, 
-							     raw=!plotFittedInsteadOfSummed, 
-							     massMatchTolerance=0.01)
+		measResult = ResultFileFunctions.loadResults(file,
+							     massesToLoad=massesToPlot,
+							     useAveragesOnly=!plotHighTimeRes,
+							     raw=!plotFittedInsteadOfSummed,
+							     massMatchTolerance=0.01,
+							     startTime=timeFrame2plot[1],
+							     endTime=timeFrame2plot[2])
 		if isobarToPlot != 0
 		  isobarResult = ResultFileFunctions.loadResults(file,
-		  					         massesToLoad=[isobarToPlot+0.3], 
-		  					         massMatchTolerance=0.5, 
-		  					         useAveragesOnly=!plotHighTimeRes, 
-		  					         raw=!plotFittedInsteadOfSummed)
+		  					         massesToLoad=[isobarToPlot+0.3],
+		  					         massMatchTolerance=0.5,
+		  					         useAveragesOnly=!plotHighTimeRes,
+		  					         raw=!plotFittedInsteadOfSummed,
+							     	 startTime=timeFrame2plot[1],
+							     	 endTime=timeFrame2plot[2])
 		  measResult=joinResultsMasses(measResult, isobarResult)
 		end
 
 		measResult.Times = measResult.Times .- timedelay
-		
+
 		if (backgroundSubstractionMode == 0)
 		  background=0
 		elseif (backgroundSubstractionMode == 1)
@@ -109,12 +147,18 @@ module PlotFunctions
 		startTimeString = Dates.format(measResult.Times[1],"yyyy/mm/dd")
 		endTimeString = Dates.format(measResult.Times[end],"yyyy/mm/dd")
 		title("$startTimeString - $endTimeString")
-		xlabel("Time [UTC]")
-		ylabel("Signal [CPS]")
+		xlabel("Time ["*timezone*"]")
+		ylabel("Signal ["*signalunit*"]")
 
 		legStrings = []
-		for i = 1:length(measResult.MasslistMasses)
-		  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i]))")
+		if ion in ["all","H+","H3O+"]
+			for i = 1:length(measResult.MasslistMasses)
+			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i])).H+")
+			end
+		elseif ion=="NH4+"
+			for i = 1:length(measResult.MasslistMasses)
+			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(MasslistFunctions.sumFormulaStringFromCompositionArray((measResult.MasslistCompositions .- [0,0,3,0,1,0,0,0])[:,i])).NH4+")
+			end
 		end
 
 		box = ax.get_position()
@@ -126,7 +170,7 @@ module PlotFunctions
 		grid()
 
 		tight_layout()
-		return fig
+		return fig,ax,measResult
 	end
 
 	function addClickToggle(plotAxis)
