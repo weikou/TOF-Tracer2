@@ -181,7 +181,7 @@ module ResultFileFunctions
 	  if ((timeIndexStart>0) & (timeIndexEnd<=size(ds)[1])) & (minimum(massIndices)>0) & (maximum(massIndices)<=size(ds)[2])
 	    # result = similar(ds[1,1],(timeIndexEnd-timeIndexStart+1),length(massIndices))
 	    result = similar(ds,((timeIndexEnd-timeIndexStart+1),length(massIndices)))
-	    
+
 		println("Creating result Matrix with size $(size(result))")
 	    if length(massIndices) < size(ds)[2]
 		println("Subset of masses requested")
@@ -352,9 +352,9 @@ module ResultFileFunctions
 	  if filterCrosstalkMasses
 	      # Filter out crosstalk masses
 	      s = MasslistFunctions.filterMassListByContribution2(masses, means, 5000, 0.05)
-	      selMasses = selMasses & s
+	      selMasses = selMasses .& s
+          println("\nRemoving $(length(masses[!s])) masses")
 	  end
-	  println("\nRemoving $(length(masses[!s])) masses")
 
 	  if noNitrogen == true
 	    selMasses = selMasses & (compositions[5,:] .== 0)
@@ -412,13 +412,12 @@ module ResultFileFunctions
 	      # Filter out crosstalk masses
 	      s = MasslistFunctions.filterMassListByContribution2(masses, means, 5000, 0.05)
 	      selMasses = selMasses .& s
+
+          println("\nRemoved $(lastCount - sum(selMasses)) masses because of crosstalk with neighbors")
 	  end
 
-	  println("\nRemoved $(lastCount - sum(selMasses)) masses because of crosstalk with neighbors")
-	  lastCount = sum(selMasses)
-
-
-	  println("\nRemoving $(length(masses[.!s])) masses")
+      lastCount = sum(selMasses)
+	  # println("\nRemoving $(length(masses[.!s])) masses")
 
 	  if noNitrogen == true
 	    selMasses = selMasses .& (compositions[5,:] .== 0)

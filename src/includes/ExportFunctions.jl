@@ -1,6 +1,7 @@
 module ExportFunctions
 	using ..InterpolationFunctions
 	using Dates
+	using DelimitedFiles
 	import ..MasslistFunctions
 
 	export exportTracesCSV, exportTracesCSVLossCorr, toMatlabTime, fromMatlabTime
@@ -34,6 +35,82 @@ module ExportFunctions
 	  else
 	    writedlm(f, hcat(averageSamples(times,average) ,(corrfactor.*(averageSamples(traces,average))' )' ))
 	  end
+	  close(f)
+	end
+
+
+	function CLOUDheader(times; title = "", level=1,version="01",authorname_mail="Name, Vorname email@uibk.ac.at", units="ppt",
+				addcomment="", threshold=1, nrrows_addcomment = 0)
+		cloudheader_traces = string("number of header rows:\t",14+nrrows_addcomment,"\n",
+				"date:\t",today(),"\n",
+				"title:\ttraces of ",title,"\n",
+				"level:\t",level,"\n",
+				"version number:\t",version,"\n",
+				"time format:\t","'Time' in Datetimeformat yyyy-mm-ddTHH:MM:SS.sss and 'unixTime' in unix","\n",
+				"start time:\t",times[1],"\n",
+				"end time:\t",times[end],"\n",
+				"author:\t",authorname_mail,"\n",
+				"principal investigator:\t","Hansel, Armin  armin.hansel@uibk.ac.at","\n",
+				"institution:\t","University of Innsbruck","\n",
+				"column delimiter:\t","tab","\n",
+				"column units:\t",units,"\n",
+				"comment:\tTraces of detected ions here. Compositions, masses and transmission factors in correspondingly named file *_compositions.csv . Compounds are filtered by (signal-BG) > ",threshold," sigma of BG. ","\n", addcomment
+				)
+		cloudheader_compositions = string("number of header rows:\t11\n",
+				"date:\t",today(),"\n",
+				"title:\tcompositional overview of ",title,"\n",
+				"level:\t",level,"\n",
+				"version number:\t",version,"\n",
+				"author:\t",authorname_mail,"\n",
+				"principal investigator:\t","Hansel, Armin  armin.hansel@uibk.ac.at","\n",
+				"institution:\t","University of Innsbruck","\n",
+				"column delimiter:\t","tab","\n",
+				"column units:\t","masses of the ions in amu; transmission factor and composition unitless","\n",
+				"comment:\tCompositions, masses and transmission factors here. Traces in correspondingly named file *_traces.csv. Compounds are filtered by (signal-BG) > ",threshold," sigma of BG. \n"
+				)
+
+		return (cloudheader_traces, cloudheader_compositions)
+	end
+
+	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, headers = ("",""), ion = "H+", average=0)
+	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions; ion = ion)
+	  f = open("$saveFolderPath/ptr3compositions.txt", "w")
+	  write(f, headers[2])
+	  if transmission != 0
+	  	DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula" "InletTransmission"],))
+	  	DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas, round.(transmission, digits=5)))
+	  else
+	  	DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula"],))
+	  	DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas))
+	  end
+
+	  close(f)
+	  f = open("$saveFolderPath/ptr3traces.csv", "w")
+	  write(f, headers[1])
+	  writedlm(f, hcat(["Time" "unixTime"], reshape(sumformulas,(1,length(sumformulas)))))
+	  if (average==0)
+	    DelimitedFiles.writedlm(f, hcat(times, datetime2unix.(times) ,traces))
+	  else
+	    DelimitedFiles.writedlm(f, hcat(averageSamples(times,average),
+	    						averageSamples(datetime2unix.(times),average),averageSamples(traces,average)))
+	  end
+	  close(f)
+	end
+
+
+	function exportFitParameters(saveasfilename,fitparams, fitparamerrs, masses, compositions; fitfunction = "")
+	  f = open(saveasfilename, "w")
+	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions)
+	  writedlm(f,["Fitparameters for the fit function "*fitfunction])
+	  s = Array{Union{Nothing, String}}(nothing, (1,size(fitparams,1)))
+	  for i in 1:size(fitparams,1)
+       		s[i] = "p$(i)"
+       	  end
+       	  serr = Array{Union{Nothing, String}}(nothing, (1,size(fitparams,1)))
+	  for i in 1:size(fitparamerrs,1)
+       		serr[i] = "p$(i)_err"
+       	  end
+	  writedlm(f,hcat(vcat(["Sumformula"],sumformulas),vcat(["Mass"],masses),vcat(s,fitparams'),vcat(serr,fitparamerrs')))
 	  close(f)
 	end
 
