@@ -196,58 +196,82 @@ module MasslistFunctions
 	  return ret
 	end
 
+	function sumFormulaStringFromCompositionArray(composition; ion = "H+")
+        if (composition[1]>1)
+          CString = "C$(composition[1])"
+        elseif composition[1] == 1
+          CString = "C"
+        else
+          CString = ""
+        end
 
-	function sumFormulaStringFromCompositionArray(composition)
-	  if (composition[1]>1)
-	    CString = "C$(composition[1])"
-	  elseif composition[1] == 1
-	    CString = "C"
-	  else
-	    CString = ""
-	  end
+        if ion == "NH4+" && (composition[3]>=4) && composition[5] >=1
+            if (composition[3]>4)
+              HString = "H$(composition[3]-3)"
+            elseif composition[3] == 4
+              HString = "H"
+            else
+              HString = ""
+            end
+        else
+            if (composition[3]>1)
+                HString = "H$(composition[3])"
+            elseif composition[3] == 1
+                HString = "H"
+            else
+                HString = ""
+            end
+        end
 
-	  if (composition[3]>1)
-	    HString = "H$(composition[3])"
-	  elseif composition[3] == 1
-	    HString = "H"
-	  else
-	    HString = ""
-	  end
+        if (composition[6]>1)
+          OString = "O$(composition[6])"
+        elseif composition[6] == 1
+          OString = "O"
+        else
+          OString = ""
+        end
 
-	  if (composition[6]>1)
-	    OString = "O$(composition[6])"
-	  elseif composition[6] == 1
-	    OString = "O"
-	  else
-	    OString = ""
-	  end
+        if ion == "NH4+" && (composition[3]>=4) && composition[5] >=1
+            if (composition[5]>2)
+              NString = "N$(composition[5]-1)"
+            elseif composition[5] == 2
+              NString = "N"
+            else
+              NString = ""
+            end
+        else
+            if (composition[5]>1)
+                NString = "N$(composition[5])"
+              elseif composition[5] == 1
+                NString = "N"
+              else
+                NString = ""
+              end
+        end
 
-	  if (composition[5]>1)
-	    NString = "N$(composition[5])"
-	  elseif composition[5] == 1
-	    NString = "N"
-	  else
-	    NString = ""
-	  end
+        if (composition[8]>1)
+          SString = "S$(composition[8])"
+        elseif composition[8] == 1
+          SString = "S"
+        else
+          SString = ""
+        end
 
-	  if (composition[8]>1)
-	    SString = "S$(composition[8])"
-	  elseif composition[8] == 1
-	    SString = "S"
-	  else
-	    SString = ""
-	  end
+      if ion == "NH4+" && composition[5] >=1 && composition[3]>=4
+        ionString = ".NH4+"
+      else
+        ionString = ".H+"
+      end
+      return "$CString$HString$OString$NString$SString$(ionString)"
+      end
 
-	  return "$CString$HString$OString$NString$SString"
-	end
-
-	function sumFormulaStringListFromCompositionArrayList(compositions; showMass = false)
+	function sumFormulaStringListFromCompositionArrayList(compositions; showMass = false, ion = "H+")
 	  ret = Array{String,1}()
 	  for i=1:size(compositions,2)
 	    if showMass
-	      push!(ret,"$(round(massFromCompositionArray(compositions[:,i]),4)) - $(sumFormulaStringFromCompositionArray(compositions[:,i]))")
+	      push!(ret,"$(round(massFromCompositionArray(compositions[:,i]),4)) - $(sumFormulaStringFromCompositionArray(compositions[:,i]; ion = ion))")
 	    else
-	      push!(ret,sumFormulaStringFromCompositionArray(compositions[:,i]))
+	      push!(ret,sumFormulaStringFromCompositionArray(compositions[:,i]; ion = ion))
 	    end
 	  end
 	  return ret
