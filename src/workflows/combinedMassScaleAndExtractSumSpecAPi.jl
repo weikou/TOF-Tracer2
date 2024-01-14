@@ -43,10 +43,6 @@ function correctMassScaleAndExtractSumSpecAPi(
   )
 
 
-  if ! dynamicMassScaleCorrection #TODO: dummy fix, should be treated in workflow
-      recalibInterval = 1e99
-  end
-
   if (isfile(joinpath(filepath, outputfilename)))
     mv(joinpath(filepath, outputfilename), joinpath(filepath, "$outputfilename.bak"), force=true)
     if debuglevel > 0   println("Found existing result file, moving to '$outputfilename.bak'") end
@@ -55,9 +51,6 @@ function correctMassScaleAndExtractSumSpecAPi(
   #files = filter(r"2016-07-04.*\.h5", readdir(filepath)) #one day only
   allFiles = readdir(filepath)
   files = filter(s->occursin(filefilterRegexp, s), allFiles)
-
-
-
 
   nFiles = size(files,1)
 
@@ -76,17 +69,13 @@ function correctMassScaleAndExtractSumSpecAPi(
   nFiles = size(files,1)
 
   validFiles, timeSortIndices = APiTOFFunctions.validateHDF5Files(filepath, files)
-  #rintln("number of validFiles 1: $(size(validFiles,1))")
-  #println("timeSortIndices 1: $(timeSortIndices)")
   if !issorted(timeSortIndices)
       println("Reordering Files according to start acquisition time!")
   else
       println("File order seems fine, continuing...")
   end
   files = validFiles[timeSortIndices]
-  #println("number of files 1: $(size(files,1))")
   nFiles = size(files,1)
-
 
   if (referenceFile == "")
     referenceFile = joinpath(filepath, files[1])

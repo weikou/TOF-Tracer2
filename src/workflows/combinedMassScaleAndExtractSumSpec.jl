@@ -5,8 +5,6 @@ import Statistics
 #using PyCall
 #pygui(:tk) # :tk, :gtk3, :gtk, :qt5, :qt4, :qt, or :wx
 import PyPlot
-#import .TOFFunctions
-#import .InterpolationFunctions
 
 function correctMassScaleAndExtractSumSpec(
   filepath,
@@ -16,7 +14,7 @@ function correctMassScaleAndExtractSumSpec(
   masslistCompositions,
   referenceFile,
   calibRegions; # Regions which are pattern matched for mass shifts
-  filefilterRegexp=r"\.h5$",
+  filefilterRegexp=r"\.h5$",   # r"2016-07-04.*\.h5" one day only
   outputfilename=joinpath("results","_result.hdf5"),
   firstNFiles=0, # only analyze the first N files, set to 0 for all files
   lastNFiles=0, # only analyze the last N files, set to 0 for all files
@@ -43,11 +41,8 @@ function correctMassScaleAndExtractSumSpec(
     if debuglevel > 0   println("Found existing result file, moving to '$outputfilename.bak'") end
   end
 
-  #files = filter(r"2016-07-04.*\.h5", readdir(filepath)) #one day only
   allFiles = readdir(filepath)
   files = filter(s->occursin(filefilterRegexp, s), allFiles)
-
-
   nFiles = size(files,1)
 
   if firstNFiles != 0
@@ -55,7 +50,6 @@ function correctMassScaleAndExtractSumSpec(
       files = files[1:firstNFiles]
     end
   end
-
   if lastNFiles != 0
     if length(files) > lastNFiles
       files = files[length(files)-lastNFiles:end]
