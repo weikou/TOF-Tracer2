@@ -106,32 +106,33 @@ module MasslistFunctions
 	function loadMasslist(filename)
 	    fileIsValidResultfile = (endswith(filename, ".hdf5") || endswith(filename, ".h5"))
 	    if fileIsValidResultfile
-		println("Trying to load masslist from result hdf5 file ($filename)!")
-		masses =  HDF5.h5read(filename, "MassList")
-		masslistElementsLoaded = HDF5.h5read(filename,"ElementNames")
-		compRaw = HDF5.h5read(filename, "ElementalCompositions")
-		masslistCompositions = []
-		for i=1:size(compRaw,2)
-		    push!(masslistCompositions,compRaw[:,i])
-		end
-		return masses,masslistElementsLoaded, masslistElementMasses, masslistCompositions
+		    println("Trying to load masslist from result hdf5 file ($filename)!")
+		    masses =  HDF5.h5read(filename, "MassList")
+		    masslistElementsLoaded = HDF5.h5read(filename,"ElementNames")
+		    compRaw = HDF5.h5read(filename, "ElementalCompositions")
+		    masslistCompositions = []
+		    for i=1:size(compRaw,2)
+		        push!(masslistCompositions,compRaw[:,i])
+		    end
+		    return masses,masslistElementsLoaded, masslistElementMasses, masslistCompositions
 	    else
 	      println("Trying to load masslist from csv file ($filename)!")
-	      list = readdlm(filename, '\t', skipstart=7)
+	      list, header = readdlm(filename, '\t', skipstart=6, header=true)
 	      masses = Array{Float64,1}()
 	      masslistCompositions = []
+	      indMass = findfirst(vec(header) .== "Mass")
 	      print("Unidentified Peaks found in masslist $filename: ")
 	      for i=1:size(list,1)
-		if sum(list[i,1:8]) > 0
-		  push!(masses,massFromCompositionArray(list[i,1:8]))
-		  push!(masslistCompositions, list[i,1:8])
-		else
-		    if list[i,9] > 0
-		    print("$(list[i,9]) ")
-		    push!(masses,list[i,9])
-		    push!(masslistCompositions, list[i,1:8])
+		    if sum(list[i,1:8]) > 0
+		      push!(masses,massFromCompositionArray(list[i,1:8]))
+		      push!(masslistCompositions, list[i,1:8])
+		    else
+		        if indMass > 0
+		        print("$(list[i,indMass]) ")
+		        push!(masses,list[i,indMass])
+		        push!(masslistCompositions, list[i,1:8])
+		        end
 		    end
-		end
 	      end
 	      sortIndices = sortperm(masses)
 	      return masses[sortIndices],masslistElements, masslistElementMasses, masslistCompositions[sortIndices]
