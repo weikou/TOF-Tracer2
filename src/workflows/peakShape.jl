@@ -21,6 +21,7 @@ function baselineAndPeakshape(
   avgSpectrum = HDF5.h5read(file, "AvgSpectrum")
 
   baselinePoints, baselineValues, baselineNoise = BaselineFunctions.calculateBaseline(massAxis,avgSpectrum,baselinePointWidth = 0.8, threshold=0.2)
+  baselinePoints = collect(baselinePoints)
   baselineNoiseInterpolated = InterpolationFunctions.interpolate(massAxis, baselinePoints, baselineNoise)
   baselineInterpolated = InterpolationFunctions.interpolate(massAxis, baselinePoints, baselineValues)
   baselineCorrectedAvgSpec = avgSpectrum[:,1] - baselineInterpolated;

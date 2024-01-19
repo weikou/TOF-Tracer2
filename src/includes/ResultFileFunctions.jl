@@ -19,28 +19,28 @@ module ResultFileFunctions
 
 	function joinResultsTime(firstResult::MeasurementResult, secondResult::MeasurementResult)
 	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
-		if (firstResult.MasslistMasses == secondResult.MasslistMasses)
-		    firstResult.Times = vcat(firstResult.Times, secondResult.Times)
-		    firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
-		    firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
-		else
-		println("Masses did not match, could not merge results!")
-		end
+            if (firstResult.MasslistMasses == secondResult.MasslistMasses)
+                firstResult.Times = vcat(firstResult.Times, secondResult.Times)
+                # firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
+                firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
+                return firstResult
+            else
+                println("Masses did not match, could not merge results!")
+            end
 	    end
-	return firstResult
 	end
 
 	function joinResultsMasses(firstResult::MeasurementResult, secondResult::MeasurementResult)
 	    if (length(firstResult.MasslistMasses) > 0) & (length(secondResult.MasslistMasses) > 0)
-		if (firstResult.Times == secondResult.Times)
-		    firstResult.MasslistMasses = vcat(firstResult.MasslistMasses, secondResult.MasslistMasses)
-		    firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
-		    firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
-		else
-		println("Times did not match, could not merge results!")
-		end
+            if (firstResult.Times == secondResult.Times)
+                firstResult.MasslistMasses = vcat(firstResult.MasslistMasses, secondResult.MasslistMasses)
+                firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
+                firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
+                return firstResult
+            else
+            println("Times did not match, could not merge results!")
+            end
 	    end
-	return firstResult
 	end
 
 	function loadResults(filename; useAveragesOnly = false, raw = false, startTime::DateTime = DateTime(0), endTime::DateTime = DateTime(3000), massesToLoad=Array{Float64,1}(), massMatchTolerance = 0.00001, masslistOnly = false)
