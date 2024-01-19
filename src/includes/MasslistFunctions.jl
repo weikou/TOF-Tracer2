@@ -260,6 +260,8 @@ module MasslistFunctions
 
       if ion == "NH4+" && composition[5] >=1 && composition[3]>=4
         ionString = ".NH4+"
+      elseif ion == ""
+        ionString = ion
       else
         ionString = ".H+"
       end

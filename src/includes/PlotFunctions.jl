@@ -410,7 +410,7 @@ module PlotFunctions
 		return InteractivePlot(figure,axes,file,activeIndices,lastPlottedIndex,coords,xs,ys,deleteXlim,availableTraces)
 	end
 
-	function InteractivePlot(file)
+	function InteractivePlot(file::String)
 		figure = PyPlot.figure()
 		ax = PyPlot.subplot(1,1,1)
 		lastPlottedIndex = 1
@@ -556,7 +556,7 @@ module PlotFunctions
 		            println("x (for deletion): ",matplotlib2datetime(event.xdata))
 			    push!(ifig.deleteXlim,matplotlib2datetime(event.xdata))
 			else
-		            println("x (for deletion): ",event.xdata)
+		        println("x (for deletion): ",event.xdata)
 			    push!(ifig.deleteXlim,event.xdata)
 			end
 		    end
