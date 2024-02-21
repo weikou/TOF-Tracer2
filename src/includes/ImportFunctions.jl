@@ -2,8 +2,10 @@ module ImportFunctions
 using DataFrames
 using Dates
 using CSV
+import ..MasslistFunctions
+import ..ResultFileFunctions
 
-export createLicorData_fromFiles
+export createLicorData_fromFiles, importExportedTraces
 
 function createLicorData_fromFiles(filepath :: String;filefilter = r"licor_.*\.txt",headerrow = 2, columnNameOfInterest="H₂O_(mmol_mol⁻¹)",type_columnOfInterest=Float64)
     files = filter(s->occursin(filefilter, s), readdir(filepath))
@@ -36,6 +38,18 @@ function createLicorData_fromFiles(filepath :: String;filefilter = r"licor_.*\.t
   return df
 end
 
-
-
+function importExportedTraces(fptraces,fpcompositions;nrElements = 8)
+    nrheaderlines = parse(Int64,split(readlines(fptraces)[1],"\t")[2])
+    data = DataFrame(CSV.File(fptraces, header = nrheaderlines))
+    nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
+    compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines))
+    times = data.Time
+    masslistMasses = values(compdata[!,"Mass"])
+    masslistElements = names(compdata)[1:nrElements]
+    masslistElementsMasses = [MasslistFunctions.elementmassDict[el] for el in masslistElements]
+    masslistCompositions = transpose(Matrix(compdata[!,1:nrElements]))
+    traces = Matrix(data[!,3:end])
+return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces)
+end
+    
 end

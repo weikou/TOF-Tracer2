@@ -54,7 +54,7 @@ module ExportFunctions
 				"institution:\t","University of Innsbruck","\n",
 				"column delimiter:\t","tab","\n",
 				"column units:\t",units,"\n",
-				"comment:\tTraces of detected ions here. Compositions, masses and transmission factors in correspondingly named file *_compositions.csv . Compounds are filtered by (signal-BG) > ",threshold," sigma of BG. ","\n", addcomment
+				"comment:\tTraces of detected ions here. Compositions, masses and transmission factors in correspondingly named file *_compositions.csv ","\n", addcomment
 				)
 		cloudheader_compositions = string("number of header rows:\t11\n",
 				"date:\t",today(),"\n",

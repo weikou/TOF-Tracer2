@@ -7,6 +7,8 @@ module CalibrationFunctions
 	using DataFrames
     using CSV
     using Dates
+    using SpecialFunctions
+    using Trapz
 
 	export generateCalibFactorTrace, generateBgTraces, interpolateBgTraces, humcal_getHumidityDependentSensitivity, humCal_getDatalimitsFromPlot
 	function getMeanOfQuantile(samples,quant)
@@ -159,7 +161,7 @@ module CalibrationFunctions
 			humdat_H2O_intp_bg = 0
 		else
 			backgroundcorrection = true
-			println("Select start and end times of the backgrounds of interest.")
+			println("Select start and end times of the backgrounds of interest, by moving the cursor to the respective times and clicking x.")
 		 # click 'x' to get an array (click for both start and end of signal / BG) of datetime coordinates for BG and signal
 			while !(length(IFIG.xs) == 2)
 			    sleep(0.1)  # seconds
@@ -214,9 +216,9 @@ module CalibrationFunctions
 
     """
         dryCal_selectPIandRefDataFromIFIG(drycalibsfile::String)
-        
+
     Requires a result file (hdf5, containing the dry calibrations) and interactive user input.
-    
+
     Returns the fit parameters hexVSpis_params in the format ([params],[errors],[functiontype,label])
     """
     function dryCal_selectPIandRefDataFromIFIG(drycalibsfile::String)
@@ -626,5 +628,208 @@ function applyFunction(xdata::Vector,params;functiontype="")
     else println("Given function type not defined. Check the help for options.")
     end
 end
+
+"""
+    log10C_T_AP_lowNOx(compositions, temp; mindimerC = 17)
+
+Arguments:
+- compositions: in the form of measResult.MasslistCompositions
+- temp: Temperature in °C
+- mindimerC = 17: the minimum number of carbon atoms in a composition to use the dimer volatility calculation.
+
+Calculates the volatilities of given compsitions based on the formulation in Simon et. al, 2020 (doi: 10.5194/acp-2019-1058).
+These functions are ONLY optimized to Alphapinene low-NOx chemistry!!! Sulfur and Nitrate groups are not considered.
+"""
+# calculateVolatility
+function log10C_T_AP_lowNOx(compositions, temp; mindimerC = 17) # this function is still missing the influence of nitrate groups at the moment!!!
+	# for a dimer (AP oxidation):
+	log10C_300K_dim = (compositions[1,:] .>= mindimerC) .* ((25 .-compositions[1,:]).*0.475 .- (
+						compositions[6,:].*(2.3-1.139)) .- 2 .*(compositions[1,:] .* compositions[6,:]) .* (-0.3) ./ (compositions[1,:] .+ compositions[6,:]))
+	log10C_300K_mon = (compositions[1,:] .< mindimerC) .* ((25 .-compositions[1,:]).*0.475 .- (
+						compositions[6,:].*(2.3-0.904)) .- 2 .*(compositions[1,:] .* compositions[6,:]) .* (-0.3) ./ (compositions[1,:] .+ compositions[6,:]))
+	log10C_300K = log10C_300K_mon .+ log10C_300K_dim
+	deltaH = (-5.7 .* log10C_300K .+129).*1000.0 # delta H in J mol⁻¹
+	log10C_temp = log10C_300K .+ deltaH ./(8.3144598 * log(10)) .* (1/300 - 1/temp)
+	return log10C_temp
+end
+
+"""
+    log10C_T_CHONS(compositions, temp; )
+
+Arguments:
+- compositions: in the form of measResult.MasslistCompositions
+- temp: Temperature in °C
+
+Calculates the volatilities of given compsitions based on the formulations in Li et al., 2016 (doi: 10.5194/acp-16-3327-2016)
+These functions take into account also sulfur and nitrate groups.
+"""
+function log10C_T_CHONS(compositions, temp; )
+    #TODO: rewrite to not use indices but keys for the elements!
+	if ion == "NH4+"
+		# TODO: Problem: cluster ions with NH3NH4+, H2ONH4+, H2OH3O+, H+ ... possible!!! How to deal with these???
+		CHONSmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .> 1) .& (compositions[6,:] .> 0) .& (compositions[8,:] .> 0)
+		CHOSmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .== 1) .& (compositions[6,:] .> 0) .& (compositions[8,:] .> 0)
+		CHONmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .> 1) .& (compositions[6,:] .> 0) .& (compositions[8,:] .== 0)
+		CHNmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .> 1) .& (compositions[6,:] .== 0) .& (compositions[8,:] .== 0)
+		CHOmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .== 1) .& (compositions[6,:] .> 0) .& (compositions[8,:] .== 0)
+		CHmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .== 1) .& (compositions[6,:] .== 0) .& (compositions[8,:] .== 0)
+	else
+		CHONSmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .> 0) .& (compositions[6,:] .> 0) .& (compositions[8,:] .> 0)
+		CHOSmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .== 0) .& (compositions[6,:] .> 0) .& (compositions[8,:] .> 0)
+		CHONmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .> 0) .& (compositions[6,:] .> 0) .& (compositions[8,:] .== 0)
+		CHNmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .> 0) .& (compositions[6,:] .== 0) .& (compositions[8,:] .== 0)
+		CHOmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .== 0) .& (compositions[6,:] .> 0) .& (compositions[8,:] .== 0)
+		CHmask  = (compositions[1,:] .> 0) .& (compositions[5,:] .== 0) .& (compositions[6,:] .== 0) .& (compositions[8,:] .== 0)
+	end
+
+	log10C_300K_CHONS = CHONSmask.*(
+			(28.5.-compositions[1,:]).*0.3848 .- 1.011*compositions[6,:] .-
+			2 .*(compositions[1,:] .* compositions[6,:]).*0.2921 ./((compositions[1,:] .+ compositions[6,:]))
+			.- 1.053 .*compositions[5,:] .- 1.316.*compositions[8,:] )
+	log10C_300K_CHOS = CHOSmask.*(
+			(24.06.-compositions[1,:]).*0.3637 .- 1.327*compositions[6,:] .-
+			2 .*(compositions[1,:] .* compositions[6,:]).*(-0.3988) ./((compositions[1,:] .+ compositions[6,:]))
+			.- 0.7579.*compositions[8,:] )
+	log10C_300K_CHON = CHONmask.*(
+			(24.13.-compositions[1,:]).*0.3667 .- 0.7732*compositions[6,:] .-
+			2 .*(compositions[1,:] .* compositions[6,:]).*(-0.07790) ./((compositions[1,:] .+ compositions[6,:]))
+			.- 1.114 .*compositions[5,:]  )
+	log10C_300K_CHN = CHNmask.*(
+			(24.59.-compositions[1,:]).*0.4066 .- 0.9619 .*compositions[5,:]  )
+	log10C_300K_CHO = CHOmask.*(
+			(22.66 .-compositions[1,:]).*0.4481 .- 1.656*compositions[6,:] .-
+			2 .*(compositions[1,:] .* compositions[6,:]).*(-0.7790) ./((compositions[1,:] .+ compositions[6,:])) )
+	log10C_300K_CH = CHmask.*((23.80 .-compositions[1,:]).*0.4861 )
+
+	log10C_300K = log10C_300K_CHONS .+ log10C_300K_CHOS .+ log10C_300K_CHON .+ log10C_300K_CHN .+ log10C_300K_CHO .+ log10C_300K_CH
+	deltaH = (-5.7 .* log10C_300K .+129).*1000.0 # delta H in J mol⁻¹
+	log10C_temp = log10C_300K .+ deltaH ./(8.3144598 * log(10)) .* (1/300 - 1/temp)
+	return log10C_temp
+end
+
+"""
+    penetrationefficiency_amu(amu,L_eff,Q_a,temp)
+
+Arguments:
+- amu : atomic mass of diffusing molecule (amu)
+- L_eff: effective length of the tube (m)
+- Q_a: flow rate (slpm)
+- temp: temperature (in Kelvin!)
+
+calculates the penetration efficiency of a substance that is fully lost to the walls through a cylindrical tube, assuming laminar flow, without considering core sampling.
+Calculation based on Gormley, 1948: Diffusion from a Stream Flowing through a Cylindrical Tube. ISSN = 00358975, URL = http://www.jstor.org/stable/20488498
+"""
+function penetrationefficiency_amu(amu,L_eff,Q_a,temp)    # calculate diffusion losses (over full pipe diameter, no core sampling!!!)
+    D_amu_temp = (0.31977194 ./(amu .^(1/3.))) .* (temp ./278.15) .^(1.75)  # cm² s⁻¹
+    mu = pi .* D_amu_temp .*(L_eff .*1e2) ./(Q_a .*1e3/60.0)	# unitless
+    eta = 0.819 .*exp.(-3.66*mu) .+0.0975 .*exp.(-22.3 .*mu)+0.0325 .*exp.(-57.0 .*mu)+0.0154 .*exp.(-107.6 .*mu)
+    return eta
+end
+
+
+"""
+    pene_core_laminar(amu; temp = 273.15, L_eff = 1.0, Q_tot = 8, Qs=1)
+
+Arguments:
+- amu: mass of the compound (in amu)
+- temp: temperature (in Kelvin)
+- L_eff: effective inlet length
+- Q_tot: total inlet flow
+- Qs: core sampling flow
+
+This function returns the sampling efficiency of a core sampling method.
+Homogeneity of concentration distribution at the entrance and the laminar flow field should be guaranteed when applying this code.
+Calculation is based on Fu et al., 2019 (doi: 10.1080/02786826.2019.1608354)
+"""
+function pene_core_laminar(amu; temp = 273.15, L_eff = 1.0, Q_tot = 8, Qs=1)
+    M_k(a,b,z,k) = gamma(a+k)/gamma(a) * gamma(b)/gamma(b+k) * z^k/factorial(k) # confluent hypergeometric function of the first kind
+	ratio_Qt_Qs = (Q_tot-Qs)/Qs
+	D_amu_temp = (0.31977194 ./(amu .^(1/3.))) .* (temp ./278.15) .^(1.75)  # cm² s⁻¹
+	miu=pi .* D_amu_temp .*(L_eff .*1e2)/(Q_tot .*1e3/60.0)
+	xi = 1/(ratio_Qt_Qs+1);
+	ri = sqrt(1-sqrt(1-xi));
+	dr = 1/500; #dr can be smaller if high resolution is needed
+	r_tuple = 0:dr:1;
+	#Ai and lamda (dimensions 1x15)
+	#lamda is the solution for M(1/2-lamda/4, 1, lamda) = 0
+	lamda = [2.70436442, 6.679031449, 10.67337954, 14.67107846, 18.66987186, 22.66914336,
+	26.668662, 30.66832334, 34.66807382, 38.66788335, 42.66773381, 46.6676137, 50.6675154,
+	54.66743365, 58.66736475];
+	Ai = [1.47643540680257, -0.806123894775032, 0.588762159116909, -0.475850417370689,
+	0.405021794815585, -0.355756510893624, 0.319169069426987, -0.290735825223707,
+	0.267891171641597, -0.249062547548187, 0.233227814791694, -0.219691460536903,
+	0.207962410670599, -0.197683079668866, 0.188586579953740];
+	n = zeros(1,length(r_tuple));
+	for ii = 1:length(r_tuple)
+		#for each radius
+		r = r_tuple[ii];
+		for nn = 1:15 #sufficient for convergence
+			Mn = 0;
+			#first (max(k)+1) terms of the expansion of the confluent hypergeometric function
+			for k = 0:20 #sufficient for convergence
+				Mn = Mn + M_k(0.5-lamda[nn]/4, 1, lamda[nn]*r^2, k)
+			end
+			En_r = exp(-lamda[nn]*r^2/2);
+			En_miu = exp(-miu*lamda[nn]^2/2);
+			#n(miu,r)
+			n[ii] = n[ii] + Ai[nn]*Mn*En_r*En_miu;
+		end
+	end
+	#integration
+	if ri<dr
+		pene = n[1];
+	else
+		idx = r_tuple .< ri; #upper bound of the integration r_a, in Eq. 6
+		u = 2 .*(1 .- r_tuple .^2); #velocity profile of laminar flow, assuming that u_avg=1% average penetration at mu at the entrance of core sampling tube
+		pene = trapz(r_tuple[idx],2*pi .*n[idx].*u[idx].*r_tuple[idx]) /trapz(r_tuple[idx],2*pi .*r_tuple[idx].*u[idx]) ;
+	end
+	return pene
+end
+
+"""
+    calculateInletTransmission_CLOUD(masses, compositions; ion = "H3O+", flow=10, sampleflow = 1,
+											inletLength = 0.7, chamberT=5, roomT=25, ptrT=37)
+
+Arguments:
+- masses: measResult.MasslistMasses
+- compositions: measResult.MasslistCompositions
+- ion: either "H3O+","H+" or "NH4+"
+- flow: total flow through inlet (1/2 inch), flow measured in slpm
+- sampleflow: coresampling flow into the PTR3 (in slpm)
+- inletLength: measured length outside of chamber (in m)
+- chamberT, roomT, ptrT: temperatures in respective environments (in °C)
+
+This function combines all inlet losses to give a total inlet transmission (specific to CLOUD!):
+1. scale inletlosscorr by vbs to maximum Inletloss correction (depending on temperatures)
+2. correct all radicals with the maximum Inletloss correction
+3. if log10 c*(chamberT)<-0.5, correct for diffusion losses with 1.0 m inlet and given inlet flow (flow, slpm)
+4. if log10 c*(roomT)<-0.5, correct for diffusion losses with with inletlength measured outside chamber (inletLength, m) and given inlet flow (flow, slpm) and core-sampling flow
+5. if log10 c*(T_case)<-0.5 correct with a factor 0.333
+All transmission factors are finally multiplied to get the overall transmission. 1/transmission is the correction factor.
+"""
+function calculateInletTransmission_CLOUD(masses, compositions; ion = "H3O+", flow=10, sampleflow = 1,
+											inletLength = 0.7, chamberT=5, roomT=25, ptrT=37)
+	if ion == "NH4+"
+			radicals = iseven.(compositions[3,:]) .& isodd.(compositions[5,:])
+	elseif ion in ["H3O+", "H+"]
+			radicals = isodd.(compositions[3,:]) .& iseven.(compositions[5,:])
+	end
+	walllossspecies_chamberT = log10C_T_CHONS(compositions, 273.15+chamberT) .<= -0.5
+	walllossspecies_roomT = log10C_T_CHONS(compositions, 273.15+roomT) .<= -0.5
+	walllossspecies_ptrT = log10C_T_CHONS(compositions, 273.15+ptrT) .<= -0.5
+
+	pene_m_in_chamber = [pene_core_laminar(m; temp = 273.15 +chamberT, L_eff = 1.0, Q_tot = flow, Qs=flow) for m in masses]
+	pene_m_out_of_chamber = [pene_core_laminar(m; temp = 273.15 +roomT, L_eff = inletLength, Q_tot = flow, Qs=sampleflow) for m in masses]
+
+	pene_in_chamber = 1.0 .- (( (1.0 .- pene_m_in_chamber ) .*
+					(walllossspecies_chamberT .+ radicals) ))
+	pene_out_of_chamber = 1.0 .- (((1.0 .-pene_m_out_of_chamber ) .*
+					(walllossspecies_roomT .+ radicals) ))
+	pene_in_ptr = 1.0 .- (0.6667 .* ((walllossspecies_ptrT .+ radicals) .> 0) )
+	pene_total = pene_in_ptr .* pene_out_of_chamber .* pene_in_chamber
+	return pene_total
+end
+
+
 
 end
