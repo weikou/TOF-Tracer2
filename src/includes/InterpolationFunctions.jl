@@ -2,6 +2,7 @@ module InterpolationFunctions
 
 	using Dates
 	import Statistics
+    using DataFrames
 	export interpolatedMax, interpolate, interpolatedSum, addArraysShiftedInterpolated, medianfilter, averageSamples, smooth, interpolateSelect, sortAverageSmoothInterpolate
 
 	function interpolatedMax(discreteMax, values)
@@ -83,22 +84,22 @@ module InterpolationFunctions
 	  end
 	  return y #convert(Array,y)
 	end
-	
+
 	"""
 	    interpolateSelect(xfinal,xprior,yprior;selTimes=(DateTime(0),DateTime(3000)))
-	
-	Returns the interpolated array within a given DateTime range. 
+
+	Returns the interpolated array within a given DateTime range.
 	"""
 	function interpolateSelect(xfinal,xprior,yprior;selTimes=(DateTime(0),DateTime(3000)))
 		yfinal = interpolate(xfinal[selTimes[1] .< xfinal .< selTimes[2]],
 			    xprior[selTimes[1] .< xprior .< selTimes[2]],
 			    yprior[selTimes[1] .< xprior .< selTimes[2]])
-		return yfinal		    
+		return yfinal
 	end
 
     """
         sortSelectAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Vector;returnSTdev=false)
-        
+
     Returns a sorted, then smoothed and finally interpolated vector
     """
 	function sortSelectAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Vector;returnSTdev=false,selectY=[-Inf,Inf])
@@ -122,8 +123,8 @@ module InterpolationFunctions
 
     """
         sortAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Matrix;returnSTdev=true)
-        
-    Returns a sorted, then smoothed and finally interpolated matrix 
+
+    Returns a sorted, then smoothed and finally interpolated matrix
     """
 	function sortAverageSmoothInterpolate(xfinal::Vector,xprior::Vector,yprior::Matrix;returnSTdev=true)
 		smooth = Int32(floor(length(xprior)/length(xfinal)/2))
@@ -204,13 +205,95 @@ module InterpolationFunctions
 	end
 
     """
-        averageSamples(data, averagePoints; dim=1, returnSTdev = false)
+        nanmean(x::AbstractArray)
+
+    returns the average over the given array, thereby ignoring nans
+    """
+	function nanmean(x::Vector)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.mean(filter(!isnan,x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+
+	function nanmean(x::Matrix;dims=1)
+		return mapslices(nanmean,x;dims = dims)
+	end
+
+    """
+        nanstd(x::AbstractArray)
+
+    returns the standard deviation over the given array, thereby ignoring nans, except the whole array is nans
+    """
+	function nanstd(x::Vector)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.std(filter(!isnan,x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+
+    function nanstd(x::Matrix;dims=1)
+		return mapslices(nanstd,x;dims = dims)
+	end
+
+    """
+        nansum(x::AbstractArray)
+
+    returns the sum over the given array, thereby ignoring nans, except the whole array is nans
+    """
+	function nansum(x::AbstractArray)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.sum(filter(!isnan, x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
 	
+	"""
+        nanmin(x::AbstractArray)
+
+    returns the minimum of the given array, thereby ignoring nans
+    """
+	function nanmin(x::Vector)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.minimum(filter(!isnan,x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+
+	function nanmin(x::Matrix;dims=1)
+		return mapslices(nanmin,x;dims = dims)
+	end
+	
+    """
+        nanmax(x::AbstractArray)
+
+    returns the maximum of the given array, thereby ignoring nans
+    """
+	function nanmax(x::Vector)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.maximum(filter(!isnan,x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+
+	function nanmax(x::Matrix;dims=1)
+		return mapslices(nanmax,x;dims = dims)
+	end
+
+    """
+        averageSamples(data, averagePoints; dim=1, returnSTdev = false, ignoreNaNs = false)
+
 	Averages multidimensional arrays in one dimension (dims), adapted from https://julialang.org/blog/2016/02/iteration.
+	Ignores NaNs (except the whole set of selected data is NaN) for average calculation, if ignoreNaNs = true.
 	Returns the averaged (smoothed) array, if returnSTdev = false.
 	Returns a tuple containing the averaged (smoothed) array and an array containing the standard deviation, if returnSTdev = true.
 	"""
-	function averageSamples(data, averagePoints; dim=1, returnSTdev = false)
+	function averageSamples(data, averagePoints; dim=1, returnSTdev = false,ignoreNaNs = false)
 	    if averagePoints > 1
 		    dt=false
 		    if typeof(data[1]) == DateTime
@@ -228,8 +311,14 @@ module InterpolationFunctions
 		      for Ipre in Rpre
 		        for i=1:len
 		          averaged[Ipre, i, Ipost] = Statistics.mean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		          if ignoreNaNs
+		            averaged[Ipre, i, Ipost] = nanmean(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		          end
 		          if returnSTdev
 		          	stdev[Ipre, i, Ipost] = Statistics.std(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		            if ignoreNaNs
+		              stdev[Ipre, i, Ipost] = nanstd(data[Ipre, ((i-1)*averagePoints+1):(i*averagePoints), Ipost])
+		            end
 		          end
 		        end
 		      end
@@ -270,5 +359,117 @@ module InterpolationFunctions
 	    end
 	    s
 	end
+
+"""
+    calculateStageMeans(stagestimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false)
+
+Arguments
+- stagestimes: an array or dataframe column containing the stage times
+- data: the data to average in a dataframe.
+
+Please Ensure, that the time column is at the left hand side of your data
+and that the columns to calculate the mean contain only numerical values to obtain proper results.
+Returns the mean values per stage.
+"""
+function calculateStageMeans(stagesTimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
+    data_mean = DataFrame([name => [] for name in names(data)])
+    if calcStdev
+        data_stdv = DataFrame(["$(name)_err" => [] for name in names(data)[2:end]])
+        data_stdv[!,data_timelabel] = []
+    end
+    timecol = findfirst(x -> x==data_timelabel,names(data))
+    if timecol==1
+        stagestimes = copy(stagesTimes)
+        if stagestimes[end] < data[end,data_timelabel]
+            push!(stagestimes,data[end,data_timelabel]+Dates.Hour(1))
+        end
+        for i in range(1,stop = (length(stagestimes)-1))
+            if ((lastMinutes==0) && (firstMinutes==0))
+                a = data[stagestimes[i] .<= data[!,data_timelabel] .< stagestimes[i+1],timecol+1:end]
+            elseif ((lastMinutes > 0) && (firstMinutes==0))
+                a = data[(stagestimes[i+1]-Dates.Minute(lastMinutes)) .<= data[!,data_timelabel] .< stagestimes[i+1],timecol+1:end]
+            elseif ((firstMinutes > 0) && (lastMinutes==0))
+                a = data[stagestimes[i] .<= data[!,data_timelabel] .< (stagestimes[i]+Dates.Minute(firstMinutes)),timecol+1:end]
+            else
+                println("select either full set (both lastMinutes and firstMinutes = 0) or one of both >0.")
+            end
+            if ignoreNaNs
+                a_mean = nanmean(Matrix(a);dims=1)
+                if calcStdev
+                    a_stdv = nanstd(Matrix(a);dims=1)
+                end
+            else
+                a_mean = Statistics.mean(Matrix(a);dims=1)
+                if calcStdev
+                    a_stdv = Statistics.std(Matrix(a);dims=1)
+                end
+            end
+            push!(data_mean,hcat(stagestimes[i],a_mean))
+            if calcStdev
+                push!(data_stdv,hcat(a_stdv,stagestimes[i]))
+            end
+        end
+        if calcStdev
+            return DataFrames.outerjoin(data_mean, data_stdv, on = data_timelabel)
+        else
+            return data_mean
+        end
+    else
+        println("Ensure, that your time array is on the left hand side of your data array and that your timelabel is correct.")
+    end
+end
+
+"""
+    calculateStageMeans(stagestimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false)
+
+Arguments
+- stagestimes: an array or dataframe column containing the stage times
+- data: the data to average in a matrix.
+- times: the timearray of the data.
+
+Returns the mean values per stage.
+"""
+function calculateStageMeans(stagesTimes::Array{DateTime,1}, data::Matrix, times::Vector; ignoreNaNs=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
+    data_mean = Matrix{Float64}(undef,length(stagesTimes),size(data)[2])
+    if calcStdev
+        data_stdv = Matrix{Float64}(undef,length(stagesTimes),size(data)[2])
+    end
+    stagestimes = copy(stagesTimes)
+    if stagestimes[end] < times[end]
+        push!(stagestimes,times[end]+Dates.Hour(1))
+    end
+    for i in range(1,stop = (length(stagestimes)-1))
+        if ((lastMinutes==0) && (firstMinutes==0))
+            a = data[stagestimes[i] .<= times .< stagestimes[i+1],:]
+        elseif ((lastMinutes > 0) && (firstMinutes==0))
+            a = data[(stagestimes[i+1]-Dates.Minute(lastMinutes)) .<= times .< stagestimes[i+1],:]
+        elseif ((firstMinutes > 0) && (lastMinutes==0))
+            a = data[stagestimes[i] .<= times .< (stagestimes[i]+Dates.Minute(firstMinutes)),:]
+        else
+            println("select either full set (both lastMinutes and firstMinutes = 0) or one of both >0.")
+        end
+        if ignoreNaNs
+            a_mean = nanmean(Matrix(a);dims=1)
+            if calcStdev
+                a_stdv = nanstd(Matrix(a);dims=1)
+            end
+        else
+            a_mean = Statistics.mean(Matrix(a);dims=1)
+            if calcStdev
+                a_stdv = Statistics.std(Matrix(a);dims=1)
+            end
+        end
+        data_mean[i,:] = a_mean
+        if calcStdev
+            data_stdv[i,:] = a_stdv
+        end
+    end
+    if calcStdev
+        return (data_mean, data_stdv)
+    else
+        return data_mean
+    end
+end
+
 
 end
