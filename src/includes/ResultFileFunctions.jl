@@ -36,6 +36,10 @@ module ResultFileFunctions
                 firstResult.MasslistMasses = vcat(firstResult.MasslistMasses, secondResult.MasslistMasses)
                 firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
                 firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
+                sorter = sortperm(firstResult.MasslistMasses)
+                firstResult.MasslistMasses = firstResult.MasslistMasses[sorter]
+                firstResult.MasslistCompositions = firstResult.MasslistCompositions[:,sorter]
+                firstResult.Traces = firstResult.Traces[:,sorter]
                 return firstResult
             else
             println("Times did not match, could not merge results!")
