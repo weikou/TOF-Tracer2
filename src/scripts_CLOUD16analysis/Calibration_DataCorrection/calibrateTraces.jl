@@ -21,9 +21,9 @@ import TOFTracer2.ImportFunctions as ImpF
 ##############################################
 
 # should cover the full period to calibrate (or as much as possible):
-frostpointfile = "/media/wiebke/Extreme SSD/CLOUD16/frostpoint.csv"
+frostpointfile = "/media/wiebke/Extreme SSD/CLOUD16/Surfactants_dataFromOthers/frostpoint.csv"
 frostpointDatetimeFormat = "dd-mm-yy HH:MM:SS"
-frostpointLabel = "fp_MBW" # should be the one from the file!
+frostpointLabel = "fp_MBW" # should be the label as from the file!
 
 licorFilepath = "/media/wiebke/Extreme SSD/CLOUD16/LicorData/"
 
@@ -43,7 +43,7 @@ primaryionslist = [] # leave empty -> default: adding all possible water and amm
 refMass = massLibrary.HEXANONE_nh4[1]
 refName = TOFTracer2.MasslistFunctions.sumFormulaStringFromCompositionArray(massLibrary.HEXANONE_nh4[4]; ion = "")
 
-exportTraces = true # if true, check HeaderForExportDict below:
+exportTraces = false # if true, check HeaderForExportDict below:
 HeaderForExportDict = Dict(
         "title"=>"oxidized hydrocarbons from Nonanal runs at -15°C",
         "level"=>2,
@@ -257,92 +257,91 @@ println("The relative standarderror of this method alone is a factor ",
 ########################################
 # manually filter for masses of interest
 ########################################
-filterCnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "C"),:] .>= 1
-filterNoCalib = vec(sum(dcps_per_ppb;dims=1) .> 0)
-filterNnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "N"),:] .== 1
-finalfilter = ((filterCnr .& filterNoCalib .& filterNnr)) #.| undeffilter)
-
-calibResult = ResultFileFunctions.MeasurementResult(mResfinal.Times,
-    mResfinal.MasslistMasses[finalfilter],
-    mResfinal.MasslistElements,
-    mResfinal.MasslistElementsMasses,
-    mResfinal.MasslistCompositions[:,finalfilter],
-    1000.0 .* mResfinal.Traces[:,finalfilter] ./ dcps_per_ppb[:,finalfilter]
-)
-
-# for filtering previously exported traces not interesting anymore:
-#=
-filterDone = ones(length(mResfinal.MasslistMasses[finalfilter]))
-filterDone[IndOfinterest] .= 0
-filterDone = BitArray(filterDone)
-calibResult = ResultFileFunctions.MeasurementResult(mResfinal.Times,
-    mResfinal.MasslistMasses[finalfilter][filterDone],
-    mResfinal.MasslistElements,
-    mResfinal.MasslistElementsMasses,
-    mResfinal.MasslistCompositions[:,finalfilter][:,filterDone],
-    (1000.0 .* mResfinal.Traces[:,finalfilter] ./ dcps_per_ppb[:,finalfilter])[:,filterDone]
-)
-=#
-
-# filter for interesting traces:
-# either with
-# - findVaryingMasses (often filters too harsh!!!),
-# - findChangingMasses (if BG and signal times clear!)
-#=
-c = ResultFileFunctions.findVaryingMasses(calibResult.MasslistMasses,
-    calibResult.MasslistCompositions,
-    calibResult.Traces;
-    sigmaThreshold=3,
-    noNitrogen = false,
-    onlySaneMasses = false,
-    filterCrosstalkMasses=false)
-IndOfinterest = c[1]
-=#
-
-# or with an interactive figure
-
-iifig = PlotFunctions.InteractivePlot(calibResult)
-#PlotFunctions.changeLastPlotTo(iifig,139)
-PlotFunctions.scrollAddTraces(iifig)
-IndOfinterest = unique(iifig.activeIndices)
-
-#=IndOfinterest = unique(sort(vcat(
-    IndOfinterest1,
-    IndOfinterest2,
-    IndOfinterest3,
-    IndOfinterest4
-   # IndOfinterest5,
-   # IndOfinterest6,
-   # IndOfinterest7,
-   # IndOfinterest8,
-   # IndOfinterest9
-)))
-=#
-
-###################################################################
-# export Traces
-###################################################################
-
-HeaderForExport = TOFTracer2.ExportFunctions.CLOUDheader(calibResult.Times;
-        title = HeaderForExportDict["title"],
-        level=HeaderForExportDict["level"],
-        version=HeaderForExportDict["version"],
-        authorname_mail=HeaderForExportDict["authorname_mail"],
-        units=HeaderForExportDict["units"],
-        addcomment=HeaderForExportDict["addcomment"],
-        threshold=HeaderForExportDict["threshold"],
-        nrrows_addcomment = HeaderForExportDict["nrrows_addcomment"])
-
-
 if exportTraces
-    TOFTracer2.ExportFunctions.exportTracesCSV_CLOUD(resultfp,
-        calibResult.MasslistElements,
-        calibResult.MasslistMasses[IndOfinterest],
-        calibResult.MasslistCompositions[:,IndOfinterest],
-        calibResult.Times,
-        calibResult.Traces[:,IndOfinterest];
-        transmission=0,
-        headers = HeaderForExport,
-        ion = ionization,
-        average=0)
+    filterCnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "C"),:] .>= 1
+    filterNoCalib = vec(sum(dcps_per_ppb;dims=1) .> 0)
+    filterNnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "N"),:] .== 1
+    finalfilter = ((filterCnr .& filterNoCalib .& filterNnr)) #.| undeffilter)
+
+    calibResult = ResultFileFunctions.MeasurementResult(mResfinal.Times,
+        mResfinal.MasslistMasses[finalfilter],
+        mResfinal.MasslistElements,
+        mResfinal.MasslistElementsMasses,
+        mResfinal.MasslistCompositions[:,finalfilter],
+        1000.0 .* mResfinal.Traces[:,finalfilter] ./ dcps_per_ppb[:,finalfilter]
+    )
+
+    # for filtering previously exported traces not interesting anymore:
+    #=
+    filterDone = ones(length(mResfinal.MasslistMasses[finalfilter]))
+    filterDone[IndOfinterest] .= 0
+    filterDone = BitArray(filterDone)
+    calibResult = ResultFileFunctions.MeasurementResult(mResfinal.Times,
+        mResfinal.MasslistMasses[finalfilter][filterDone],
+        mResfinal.MasslistElements,
+        mResfinal.MasslistElementsMasses,
+        mResfinal.MasslistCompositions[:,finalfilter][:,filterDone],
+        (1000.0 .* mResfinal.Traces[:,finalfilter] ./ dcps_per_ppb[:,finalfilter])[:,filterDone]
+    )
+    =#
+
+    # filter for interesting traces:
+    # either with
+    # - findVaryingMasses (often filters too harsh!!!),
+    # - findChangingMasses (if BG and signal times clear!)
+    #=
+    c = ResultFileFunctions.findVaryingMasses(calibResult.MasslistMasses,
+        calibResult.MasslistCompositions,
+        calibResult.Traces;
+        sigmaThreshold=3,
+        noNitrogen = false,
+        onlySaneMasses = false,
+        filterCrosstalkMasses=false)
+    IndOfinterest = c[1]
+    =#
+
+    # or with an interactive figure
+
+    iifig = PlotFunctions.InteractivePlot(calibResult)
+    #PlotFunctions.changeLastPlotTo(iifig,139)
+    PlotFunctions.scrollAddTraces(iifig)
+    IndOfinterest = unique(iifig.activeIndices)
+
+    #=IndOfinterest = unique(sort(vcat(
+        IndOfinterest1,
+        IndOfinterest2,
+        IndOfinterest3,
+        IndOfinterest4
+       # IndOfinterest5,
+       # IndOfinterest6,
+       # IndOfinterest7,
+       # IndOfinterest8,
+       # IndOfinterest9
+    )))
+    =#
+
+    ###################################################################
+    # export Traces
+    ###################################################################
+
+    HeaderForExport = TOFTracer2.ExportFunctions.CLOUDheader(calibResult.Times;
+            title = HeaderForExportDict["title"],
+            level=HeaderForExportDict["level"],
+            version=HeaderForExportDict["version"],
+            authorname_mail=HeaderForExportDict["authorname_mail"],
+            units=HeaderForExportDict["units"],
+            addcomment=HeaderForExportDict["addcomment"],
+            threshold=HeaderForExportDict["threshold"],
+            nrrows_addcomment = HeaderForExportDict["nrrows_addcomment"])
+
+        TOFTracer2.ExportFunctions.exportTracesCSV_CLOUD(resultfp,
+            calibResult.MasslistElements,
+            calibResult.MasslistMasses[IndOfinterest],
+            calibResult.MasslistCompositions[:,IndOfinterest],
+            calibResult.Times,
+            calibResult.Traces[:,IndOfinterest];
+            transmission=0,
+            headers = HeaderForExport,
+            ion = ionization,
+            average=0)
 end
