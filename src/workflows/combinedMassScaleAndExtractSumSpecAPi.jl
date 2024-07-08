@@ -174,7 +174,7 @@ function correctMassScaleAndExtractSumSpecAPi(
     dsAvgSumWidth = length(referenceSpectrum)
     dspaceAvgSumSpecs = HDF5.dataspace((dsAvgSumWidth,1)::Dims, max_dims=(dsAvgSumWidth,typemax(Int64)))
     dtypeAvgSumSpecs = HDF5.datatype(Float32)
-    dsetAvgSumSpecs = HDF5.create_dataset(fid, "SumSpecs", dtypeAvgSumSpecs, dspaceAvgSumSpecs; chunk=(dsAvgSumWidth,1), compress=3)
+    dsetAvgSumSpecs = HDF5.create_dataset(fid, "SumSpecs", dtypeAvgSumSpecs, dspaceAvgSumSpecs; chunk=(dsAvgSumWidth,1), deflate=3)
   end
 
   if (!onlyUseAverages)
@@ -182,11 +182,11 @@ function correctMassScaleAndExtractSumSpecAPi(
     dsStickCpsWidth = nMasses
     dspaceStickCps = HDF5.dataspace((1,dsStickCpsWidth)::Dims, max_dims=(typemax(Int64),dsStickCpsWidth))
     dtypeStickCps = HDF5.datatype(Float32)
-    dsetStickCps = HDF5.create_dataset(fid, "StickCps", dtypeStickCps, dspaceStickCps; chunk=(1,dsStickCpsWidth), compress=3)
-    dsetStickCpsErr = HDF5.create_dataset(fid, "StickCpsErr", dtypeStickCps, dspaceStickCps; chunk=(1,dsStickCpsWidth), compress=3)
+    dsetStickCps = HDF5.create_dataset(fid, "StickCps", dtypeStickCps, dspaceStickCps; chunk=(1,dsStickCpsWidth), deflate=3)
+    dsetStickCpsErr = HDF5.create_dataset(fid, "StickCpsErr", dtypeStickCps, dspaceStickCps; chunk=(1,dsStickCpsWidth), deflate=3)
     dsUMRStickCpsWidth = UMRmasses
     dspaceUMRStickCps = HDF5.dataspace((1,dsUMRStickCpsWidth)::Dims, max_dims=(typemax(Int64),dsUMRStickCpsWidth))
-    dsetUMRStickCps = HDF5.create_dataset(fid, "UMRStickCps", dtypeStickCps, dspaceUMRStickCps; chunk=(1,dsUMRStickCpsWidth), compress=3)
+    dsetUMRStickCps = HDF5.create_dataset(fid, "UMRStickCps", dtypeStickCps, dspaceUMRStickCps; chunk=(1,dsUMRStickCpsWidth), deflate=3)
 
     dspaceTimes = HDF5.dataspace((1,)::Dims, max_dims=(typemax(Int64),))
     dtypeTimes = HDF5.datatype(Float64)

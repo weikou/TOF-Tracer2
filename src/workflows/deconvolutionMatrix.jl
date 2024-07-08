@@ -1,7 +1,6 @@
 import HDF5
 import PyPlot
 import SparseArrays
-#import .MultipeakFunctions
 
 
 function deconvolute(
@@ -99,7 +98,7 @@ function deconvolute(
   PyPlot.errorbar(masses,y,xerr=assyErrorX, fmt="x")
 
   PyPlot.legend()
-  ax[:set_ylim]([minimum(totalAvgSpectrum),maximum(totalAvgSpectrum)])
+  ax.set_ylim([minimum(totalAvgSpectrum),maximum(totalAvgSpectrum)])
   println(" DONE")
 
 
@@ -122,7 +121,7 @@ function deconvolute(
 
     # Create empty Dataspace
     nbrSpectra = ResultFileFunctions.getNbrTraceSamples(file)
-    dset = HDF5.create_dataset(fh, "CorrStickCps", HDF5.datatype(Float32), HDF5.dataspace(nbrSpectra, length(masses)); chunk=(1,length(masses)), compress=3)
+    dset = HDF5.create_dataset(fh, "CorrStickCps", HDF5.datatype(Float32), HDF5.dataspace(nbrSpectra, length(masses)); chunk=(1,length(masses)), deflate=3)
 
     toProcessLow = 0
     toProcessHigh = 0

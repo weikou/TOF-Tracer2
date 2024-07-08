@@ -44,7 +44,6 @@ correctMassScaleAndExtractSumSpecAPi(
     umrBinWidth =100
     #binWidth = 10
     )
-#
 baselineAndPeakshape(
     fp,
     peakshapeRegions=4,
@@ -54,11 +53,8 @@ baselineAndPeakshape(
     peakWindowWidth = 100,
     peakfindingSignalLimit=0.5
     )
-    #
-#
 mtrx = deconvolute(
     fp,
     calcTransposed = false,
     APITOF = true
     )
-#

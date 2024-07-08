@@ -96,7 +96,7 @@ module PeakshapeFunctions
 		  PyPlot.semilogy(peakWood)
 	      end
 	      PyPlot.semilogy(peakshapeY, "o-", label="$peakshapeRangeStart - $peakshapeRangeEnd")
-	      ax["set_title"]("$(round(peakshapeRangeStart,digits=1)) - $(round(peakshapeRangeEnd,digits=1))")
+	      ax.set_title("$(round(peakshapeRangeStart,digits=1)) - $(round(peakshapeRangeEnd,digits=1))")
 	    end
 	    PyPlot.suptitle("Mass dependent Peakshapes")
 	    return peakShapesCenterMass, peakShapesY

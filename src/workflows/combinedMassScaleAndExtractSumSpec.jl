@@ -33,7 +33,8 @@ function correctMassScaleAndExtractSumSpec(
   binWidth = 6,
   resolution = 7500,
   filePrecaching = true, # Precache whole next file. Only use when you have enough RAM and no SWAP has to be used.
-  openWholeFile = true
+  openWholeFile = true,
+  validateFiles = true
   )
 
   if (isfile(joinpath(filepath, outputfilename)))
@@ -58,7 +59,11 @@ function correctMassScaleAndExtractSumSpec(
 
   nFiles = size(files,1)
 
-  validFiles, timeSortIndices = TOFFunctions.validateHDF5Files(filepath, files)
+  if validateFiles
+    validFiles, timeSortIndices = TOFFunctions.validateHDF5Files(filepath, files)
+  else
+    validFiles, timeSortIndices = files, collect(1:nFiles)
+  end
   if !issorted(timeSortIndices)
       println("Reordering Files according to start acquisition time!")
   else
@@ -115,12 +120,11 @@ function correctMassScaleAndExtractSumSpec(
 
   # Calculate Integration Borders
   if (massBorderCalculation == 0)
-  mlow = masslistMasses - 0.1
-  mhigh = masslistMasses + 0.4
+    massborders = MasslistFunctions.IntegrationBorders(masslistMasses, masslistMasses .- 0.1, masslistMasses .+ 0.4)
   elseif  (massBorderCalculation == 1)
-  #mlow = masslistMasses .* resolution./(resolution+0.5)
-  #mhigh = masslistMasses .* resolution./(resolution-0.5)
-  massborders = MasslistFunctions.IntegrationBorders(masslistMasses; resolution=resolution)
+    massborders = MasslistFunctions.IntegrationBorders(masslistMasses; resolution=resolution)
+  elseif (massBorderCalculation == 2)
+    massborders = MasslistFunctions.IntegrationBorders(masslistMasses, masslistMasses .- binWidth/2, masslistMasses .+ binWidth/2)
   end
 
 
@@ -151,7 +155,7 @@ function correctMassScaleAndExtractSumSpec(
     dsAvgSumWidth = length(referenceSpectrum)
     dspaceAvgSumSpecs = HDF5.dataspace((dsAvgSumWidth,1)::Dims, max_dims=(dsAvgSumWidth,typemax(Int64)))
     dtypeAvgSumSpecs = HDF5.datatype(Float32)
-    dsetAvgSumSpecs = HDF5.create_dataset(fid, "SumSpecs", dtypeAvgSumSpecs, dspaceAvgSumSpecs; chunk=(dsAvgSumWidth,1), compress=3)
+    dsetAvgSumSpecs = HDF5.create_dataset(fid, "SumSpecs", dtypeAvgSumSpecs, dspaceAvgSumSpecs; chunk=(dsAvgSumWidth,1), deflate=3)
   end
 
   if (!onlyUseAverages)
@@ -159,8 +163,8 @@ function correctMassScaleAndExtractSumSpec(
     dsStickCpsWidth = nMasses
     dspaceStickCps = HDF5.dataspace((1,dsStickCpsWidth)::Dims, max_dims=(typemax(Int64),dsStickCpsWidth))
     dtypeStickCps = HDF5.datatype(Float32)
-    dsetStickCps = HDF5.create_dataset(fid, "StickCps", dtypeStickCps, dspaceStickCps; chunk=(1,dsStickCpsWidth), compress=3)
-    dsetStickCpsErr = HDF5.create_dataset(fid, "StickCpsErr", dtypeStickCps, dspaceStickCps, chunk=(1,dsStickCpsWidth), compress=3)
+    dsetStickCps = HDF5.create_dataset(fid, "StickCps", dtypeStickCps, dspaceStickCps; chunk=(1,dsStickCpsWidth), deflate=3)
+    dsetStickCpsErr = HDF5.create_dataset(fid, "StickCpsErr", dtypeStickCps, dspaceStickCps, chunk=(1,dsStickCpsWidth), deflate=3)
 
     dspaceTimes = HDF5.dataspace((1,)::Dims, max_dims=(typemax(Int64),))
     dtypeTimes = HDF5.datatype(Float64)
@@ -217,7 +221,6 @@ function correctMassScaleAndExtractSumSpec(
     if debuglevel > 1   println() end
     print("Average Stick integration... ")
     for i=(1:nMasses)
-      #if debuglevel > 0   println("Processing region mass($(mlow[i]):$(mhigh[i])) --> timebin($(round(TOFFunctions.mass2timebin(mlow[i],massCalibMode,newParams))):$(round(TOFFunctions.mass2timebin(mhigh[i],massCalibMode,newParams))))") end
       if (massBorderCalculation == 2)
         centerIndex = Int64(floor(TOFFunctions.mass2timebin(masslistMasses[i], referenceMassScaleMode, newParams)))
         if ((centerIndex-binWidth) > 0) && ((centerIndex+binWidth)<length(avgSpectrum))
@@ -308,7 +311,6 @@ function correctMassScaleAndExtractSumSpec(
             end
             subSpecStickCps[i]=raw
           else
-            #if debuglevel > 0   println("Processing region mass($(mlow[i]):$(mhigh[i])) --> timebin($(round(TOFFunctions.mass2timebin(mlow[i],massCalibMode,newParams))):$(round(TOFFunctions.mass2timebin(mhigh[i],massCalibMode,newParams))))") end
             subSpecStickCps[i]= InterpolationFunctions.interpolatedSum(mbIndicesLowMass[i],mbIndicesHighMass[i],subSpectrum)
           end
         end
