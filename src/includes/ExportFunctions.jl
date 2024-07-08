@@ -6,13 +6,32 @@ module ExportFunctions
 
 	export exportTracesCSV, exportTracesCSVLossCorr, toMatlabTime, fromMatlabTime
 
-	function exportTracesCSV(saveFolderPath, elementNames, compositions, times, traces; average=0)
+
+    function createDirectoryOrBackupFiles(saveFolderPath;filename="")
+      if !isdir(saveFolderPath)
+	    try 
+	        mkdir(saveFolderPath)
+	        println("Creating $(saveFolderPath) to save exported compositions and traces.")
+	    catch 
+	        error("Could not create $(saveFolderPath).")
+	    end
+	  else 
+	    if isfile(joinpath(saveFolderPath,filename))
+	        mv(joinpath(saveFolderPath,filename), joinpath(saveFolderPath, "$(filename).bak"), force=true)
+	        println("Moved existing $(filename) to $(filename).bak")
+	    end
+	  end
+    end
+
+	function exportTracesCSV(saveFolderPath, elementNames, compositions, times, traces; average=0,filenameAddition="")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions$(filenameAddition).txt")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces$(filenameAddition).csv")
 	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions)
-	  f = open(joinpath(saveFolderPath,"ptr3compositions.txt"), "w")
+	  f = open(joinpath(saveFolderPath,"ptr3compositions$(filenameAddition).txt"), "w")
 	  writedlm(f, hcat(["Mass" "SumFormula"],reshape(elementNames,(1,length(elementNames)))))
 	  writedlm(f, hcat(MasslistFunctions.massFromCompositionArrayList(compositions),sumformulas , compositions'))
 	  close(f)
-	  f = open(joinpath(saveFolderPath,"ptr3traces.csv"), "w")
+	  f = open(joinpath(saveFolderPath,"ptr3traces$(filenameAddition).csv"), "w")
 	  writedlm(f, hcat(["Time"], reshape(sumformulas,(1,length(sumformulas)))))
 	  if (average==0)
 	    writedlm(f, hcat(times ,traces))
@@ -21,23 +40,6 @@ module ExportFunctions
 	  end
 	  close(f)
 	end
-
-	function exportTracesCSVLossCorr(saveFolderPath, elementNames, compositions, times, traces, lossfactor, lossfactorerr, corrfactor, corrfactorerr, corrnotes; average=0)
-	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions)
-	  f = open(joinpath(saveFolderPath,"ptr3compositions.txt"), "w")
-	  writedlm(f, hcat(["Mass"	"SumFormula"],reshape(elementNames,(1,length(elementNames))),["LossFactor"	"LossFactorError"	"CorrFactor"	"CorrFactorErr"	"CorrNotes"]))
-	  writedlm(f, hcat(MasslistFunctions.massFromCompositionArrayList(compositions),sumformulas , compositions', lossfactor, lossfactorerr, corrfactor, corrfactorerr, corrnotes))
-	  close(f)
-	  f = open(joinpath(saveFolderPath,"ptr3tracesInletLossCorr.csv"), "w")
-	  writedlm(f, hcat(["Time"], reshape(sumformulas,(1,length(sumformulas)))))
-	  if (average==0)
-	    writedlm(f, hcat(times , (corrfactor.*traces' )' ))
-	  else
-	    writedlm(f, hcat(averageSamples(times,average) ,(corrfactor.*(averageSamples(traces,average))' )' ))
-	  end
-	  close(f)
-	end
-
 
 	function CLOUDheader(times; title = "", level=1,version="01",authorname_mail="Name, Vorname email@uibk.ac.at", units="ppt",
 				addcomment="", threshold=1, nrrows_addcomment = 0)
@@ -71,10 +73,12 @@ module ExportFunctions
 
 		return (cloudheader_traces, cloudheader_compositions)
 	end
-
-	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, headers = ("",""), ion = "H+", average=0)
+    
+	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, headers = ("",""), ion = "H+", average=0,filenameAddition="_CLOUDheader")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions$(filenameAddition).txt")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces$(filenameAddition).csv")
 	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions; ion = ion)
-	  f = open("$saveFolderPath/ptr3compositions.txt", "w")
+	  f = open(joinpath(saveFolderPath,"ptr3compositions$(filenameAddition).txt"), "w")
 	  write(f, headers[2])
 	  if transmission != 0
 	  	DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula" "InletTransmission"],))
@@ -85,7 +89,7 @@ module ExportFunctions
 	  end
 
 	  close(f)
-	  f = open("$saveFolderPath/ptr3traces.csv", "w")
+	  f = open(joinpath(saveFolderPath,"ptr3traces$(filenameAddition).csv"), "w")
 	  write(f, headers[1])
 	  writedlm(f, hcat(["Time" "unixTime"], reshape(sumformulas,(1,length(sumformulas)))))
 	  if (average==0)
@@ -114,13 +118,22 @@ module ExportFunctions
 	  close(f)
 	end
 
-	################ EXAMPLE from Matlab: 737551.673515479 should be 06-May-2019 16:09:51 #############
+    """
+        toMatlabTime(t::Dates.DateTime)
+        
+    Returns the corresponding matlab datenum timestamp (Float64).
+    """
 	function toMatlabTime(t::Dates.DateTime)
 	    timespan = ((t+Dates.Day(1)) - Dates.DateTime(0,1,1,0,0,0))
 	    millis::Float64 = Dates.value(timespan)
 	    return millis/24/3600/1000
 	end
-
+	
+    """
+        fromMatlabTime(timestamp::Number)
+        
+    Returns a julia datetime based on a matlab datenum timestamp.
+    """
 	function fromMatlabTime(timestamp::Number)
 	    days=Int(floor(timestamp))
 	    millisecondsRemainder = Int(round((timestamp-days)*24*3600*1000))

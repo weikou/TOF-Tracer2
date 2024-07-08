@@ -1,0 +1,4 @@
+Start	Run number	type	Description	End	comments
+2016/10/02 18:20:05	2601.01	Preparation	Prepare chamber for HOxSetup	2016/10/02 18:39:59	
+2016/10/02 18:39:59	2601.02	GCR	Cleaning the chamber	2016/10/02 19:00:53	Massspectra showed a lot of contamination
+2016/10/02 19:00:53	2601.03	Cleaning		2016/10/02 19:10:53	

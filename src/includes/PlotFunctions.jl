@@ -4,7 +4,7 @@ module PlotFunctions
 	import ..ResultFileFunctions
 	import ..InterpolationFunctions
 	using PyPlot
-    using PyCall
+    using PyCall    
 	using HDF5
 	using Dates
 	using CSV
@@ -27,11 +27,20 @@ module PlotFunctions
 	maxMass = 450 (float),
 	maxDefect = 0.25 (float),
 	minConc = 0.02 (float),
-	sumformulas = false (boolean)
+	sumformulas = false (boolean),
+	ionization = "H+", 
+	scaleAreaLinearly=false, 
+	colormap="viridis",
+	norm=0,
+	colorbarticks=[],
+	colorbarticklabels=[],
+	colorbarextend="neither", # other options: "both","max"
 	"""
-	function massDefectPlot(masses, compositions, concentrations, colors; plotTitle = " ", colorCodeTitle = " ", dotSize = 10, maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false, ionization = "H+", scaleAreaLinearly=false, colormap="viridis")
-	  fig = figure()
-      
+	function massDefectPlot(masses, compositions, concentrations, colors; plotTitle = " ", colorCodeTitle = " ", dotSize = 10, maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false, ionization = "H+", scaleAreaLinearly=false, colormap="viridis",norm=0, colorbarticks=[],colorbarticklabels=[], colorbarextend="neither",newfigure=true)
+	  if newfigure
+	    fig = figure()
+      end
+        
 	  h2o = MasslistFunctions.createCompound(H=2,O=1, Hplus=0)
 	  o = MasslistFunctions.createCompound(O=1, Hplus=0)
 
@@ -56,7 +65,11 @@ module PlotFunctions
 	      # as it is the area of the marker that is perceived when comparing different patches rather than its side length or diameter. 
 	      # I.e. doubling the underlying quantity should double the area of the marker.
 	      # dotsize might need adjustment!
-	      s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap])
+	      if norm == 0
+	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap])
+	      else
+	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], norm=norm)
+	      end
 	      maxsize = round(Statistics.maximum(concentrations[f]);sigdigits=2)
 	      minsize = round(minConc;sigdigits=1)
 	      msizes = dotSize.*round.(10 .^ range(log10(minsize),stop=log10(maxsize),step=1);sigdigits=2)
@@ -65,13 +78,17 @@ module PlotFunctions
 	      end
 	  else
 	      # scaling area with sqrt(conc) makes sense, when the sizes scale over many orders of magnitude
-	      s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap])      
+	      if norm == 0
+	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap])  
+	      else
+	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap],norm=norm)   
+	      end
 	      maxsize = round(sqrt.(Statistics.maximum(concentrations[f]));sigdigits=1)
 	      minsize = round(sqrt.(minConc);sigdigits=1)
 	      maxval = round(Statistics.maximum(concentrations[f]);sigdigits=1)
 	      minval = round(minConc;sigdigits=1)
 	      nrsteps = floor(log10(maxval/minval))
-	      mvalues = (round.(10 .^ range(log10(maxval/10^nrsteps),stop=log10(maxval),step=1);sigdigits=1))
+	      mvalues = (round.(10 .^ range(log10(maxval/10^nrsteps),stop=log10(maxval),step=1.0);sigdigits=1))
       	  msizes = dotSize .* sqrt.(mvalues)
       	  for i=1:length(msizes)
       	    scatter([],[],s=msizes[i], color = "k", label=string(mvalues[i]), alpha = 0.5, edgecolors="dimgrey")
@@ -80,7 +97,17 @@ module PlotFunctions
 	  end
 	  xlim(0,maxMass)
 	  ylim(0,maxDefect)
-	  cb=colorbar(s)
+	  if (length(colorbarticks)>1) && (colorbarextend != "neither")
+	        cb=colorbar(s,ticks=colorbarticks;extend=colorbarextend)
+	        cb["ax"]["set_yticklabels"](colorbarticklabels)
+	    elseif colorbarextend != "neither"
+	        cb=colorbar(s;extend=colorbarextend)
+	    elseif length(colorbarticks)>1 
+	        cb=colorbar(s,ticks=colorbarticks)
+	        cb["ax"]["set_yticklabels"](colorbarticklabels)
+	    else
+	        cb = colorbar(s)
+	    end
 	  cb["ax"]["set_ylabel"](colorCodeTitle)
 	  xlabel("Mass [amu]")
 	  ylabel("Kendrick Mass Defect")
@@ -90,6 +117,152 @@ module PlotFunctions
 	  return fig
 	end
 
+    """
+        volatilityColorMap()
+
+    Returns the listed colormap used for coloring molecule volatilities, following Donahue et al., 2012 and later
+    """
+    function volatilityColorMap()
+        volatilityColors = matplotlib.colors.ListedColormap(["gray", "hotpink","lightgreen", "deepskyblue"],"volatility")
+        volatilityColors.set_extremes(under="darkorchid",over="white")
+        volatilityBounds = [-8.3, -4.3, -0.3, 2.7,6.7]
+        volatilityNorm = matplotlib.colors.BoundaryNorm(volatilityBounds, volatilityColors.N)
+        return volatilityColors, volatilityNorm
+    end
+
+    """
+        customListedColorMap(colorlist;boundaries=[],name="custom")
+
+    Returns a custom listed colormap. 
+    Expects a list of colors and a list of boundaries with length(boundaries) = length(colors)+1
+    """
+    function customListedColorMap(colorlist;boundaries=[],name="custom")
+        customColorMap = matplotlib.colors.ListedColormap(colorlist,name)
+        if length(boundaries) == length(colorlist)+1
+            customNorm = matplotlib.colors.BoundaryNorm(boundaries, customColorMap.N)
+            return customColorMap, customNorm
+        else
+            println("no boundaries given for norm or wrong length. BoundaryNorm requires 1 boundary more than colors given.")
+            return customColorMap, 0
+        end
+    end
+
+
+	"""
+	    MDplot_stages(masses, concs, color, savefn; kwargs ...)
+
+	returns a figure, showing the data (a collection of exact masses and their corresponding concentrations) as a massdefect plot.
+	Requires proper selection of stagenrs, stageBG, and stageSignal!!!
+
+	keyword argument default values (and expected types) for adjusting the plot optics:
+	-------
+        stagenrs=[],
+        stageBG=2600.02,
+        stageSignal=2600.01,
+        scalingfactor=1,
+        colvmin=0,  # minimum for scaling the colorbar range
+        colvmax=1,  # maximum for scaling the colorbar range
+        colorCodeTitle=" ",
+        legendLoc=4,
+        scalePoints="linear", # other options: "squareRoot", "log2", "log10"
+        cmap=PyPlot.cm["viridis"],
+        norm=0,
+        colorbarextend=both, # other options: "neither", "both", "min", "max"
+
+        newfigure=true,
+        colorbarticks=[],
+        colorbarticklabels=[]
+	"""
+    function MDplot_stages(masses, concs, color, savefn;legendLoc=4,alpha=0.3,
+        stagenrs=[],stageBG=2600.02,stageSignal=2600.01,scalingfactor=1,scalePoints="linear",
+        colorCodeTitle=" ",colorbarticks=[],colorbarticklabels=[],colorbarextend="neither",
+        cmap=PyPlot.cm["viridis"],norm=0,colvmin=0,colvmax=1,newfigure=true)
+        stagenrIdxBG = findfirst(x -> x == stageBG,stagenrs)
+        stagenrIdxSignal = findfirst(x -> x == stageSignal,stagenrs)
+        s=([values(concs[stagenrIdxSignal,:])...] .- [values(concs[stagenrIdxBG,:])...])
+        s[s.==Inf] .= NaN
+        s[s.<0] .= NaN
+        figure()
+        maxsize = round(InterpolationFunctions.nanmax(s);sigdigits=2)
+	    minsize = round(maxsize.*1e-5;sigdigits=1)
+	    msizes = round.(10 .^ range(log10(minsize),stop=log10(maxsize),step=1);sigdigits=2)
+	    massdef = round.(masses .- round.(masses),digits=4)
+	    if norm==0
+	        if scalePoints=="linear"
+                sc = scatter(masses, massdef,s=s.*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",vmin=colvmin,vmax=colvmax,cmap=cmap)
+                for i in 1:length(msizes)
+                  scatter([],[],s=msizes[i].*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end 
+                title("$(stageSignal)" * " - points' area scaled linearly with concentrations") 	    
+	        elseif scalePoints=="squareRoot"
+                sc = scatter(masses, massdef,s=sqrt.(s).*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",vmin=colvmin,vmax=colvmax,cmap=cmap)
+                for i in 1:length(msizes)
+                  scatter([],[],s=sqrt.(msizes[i]).*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end
+                title("$(stageSignal)" * " - points' area scaled with $(scalePoints) of concentrations") 
+            elseif scalePoints=="log2"
+                sc = scatter(masses, massdef,s=log2.(s).*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",vmin=colvmin,vmax=colvmax,cmap=cmap)
+                for i in 1:length(msizes)
+                  scatter([],[],s=log2.(msizes[i]).*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end
+                title("$(stageSignal)" * " - points' area scaled with $(scalePoints) of concentrations") 
+            elseif scalePoints=="log10"
+                sc = scatter(masses, massdef,s=log10.(s).*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",vmin=colvmin,vmax=colvmax,cmap=cmap)
+                for i in 1:length(msizes)
+                  scatter([],[],s=log10.(msizes[i]).*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end
+                title("$(stageSignal)" * " - points' area scaled with $(scalePoints) of concentrations") 
+            end  
+        else
+	        if scalePoints=="linear"
+                sc = scatter(masses, massdef,s=s.*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",cmap=cmap,norm=norm)
+                for i in 1:length(msizes)
+                  scatter([],[],s=msizes[i].*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end 
+                title("$(stageSignal)" * " - points' area scaled linearly with concentrations") 	    
+	        elseif scalePoints=="squareRoot"
+                sc = scatter(masses, massdef,s=sqrt.(s).*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",cmap=cmap,norm=norm)
+                for i in 1:length(msizes)
+                  scatter([],[],s=sqrt.(msizes[i]).*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end
+                title("$(stageSignal)" * " - points' area scaled with $(scalePoints) of concentrations") 
+            elseif scalePoints=="log2"
+                sc = scatter(masses, massdef,s=log2.(s).*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",cmap=cmap,norm=norm)
+                for i in 1:length(msizes)
+                  scatter([],[],s=log2.(msizes[i]).*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end
+                title("$(stageSignal)" * " - points' area scaled with $(scalePoints) of concentrations") 
+            elseif scalePoints=="log10"
+                sc = scatter(masses, massdef,s=log10.(s).*scalingfactor,c=color,alpha=alpha, edgecolors="dimgrey",cmap=cmap,norm=norm)
+                for i in 1:length(msizes)
+                  scatter([],[],s=log10.(msizes[i]).*scalingfactor, color = "darkgrey", label=string(msizes[i]), alpha=alpha, edgecolors="dimgrey")
+                end
+                title("$(stageSignal)" * " - points' area scaled with $(scalePoints) of concentrations") 
+            end          
+        end  
+        xlim(0,maximum(masses)+50)
+	    ylim(minimum(massdef)-0.1,maximum(massdef)+0.1)
+	    if (length(colorbarticks)>1) && (colorbarextend != "neither")
+	        cb=colorbar(sc,ticks=colorbarticks;extend=colorbarextend)
+	        cb["ax"]["set_yticklabels"](colorbarticklabels)
+	    elseif colorbarextend != "neither"
+	        cb=colorbar(sc;extend=colorbarextend)
+	    elseif length(colorbarticks)>1 
+	        cb=colorbar(sc,ticks=colorbarticks)
+	        cb["ax"]["set_yticklabels"](colorbarticklabels)
+	    else
+	        cb = colorbar(sc)
+	    end
+	    cb["ax"]["set_ylabel"](colorCodeTitle)
+	    xlabel("Mass [amu]")
+	    ylabel("Kendrick Mass Defect")
+	    grid("on")
+	    legend(loc=legendLoc)
+        savefig(savefn*".png")
+        savefig(savefn*".pdf")
+    end	
+
+#=
 	function bananaPlot(xbins,ybins,meshdataXY;subplotAx=0)
 	    println("Not implemented yet!!!")
 	    #if subplotAx == 0
@@ -99,6 +272,7 @@ module PlotFunctions
 	    pcolormesh([DateTime(2018,05,05),DateTime(2018,05,06),DateTime(2018,05,07)],[1,7,9],[1 2 3; 4 5 6; 7 8 9][1:end-1,1:end-1])
 	    #yscale("log")
 	end
+=#
 
 	"""
 	    plotTracesFromHDF5(file, massesToPlot; kwargs...)
@@ -135,7 +309,8 @@ module PlotFunctions
 			    timeFrame2plot=(DateTime(0),DateTime(3000)),
 			    timezone = "UTC",
 			    signalunit = "CPS",
-			    ion = "all"
+			    ion = "all",
+			    subplotlayout = 111
 			    )
 		measResult = ResultFileFunctions.loadResults(file,
 							     massesToLoad=massesToPlot,
@@ -168,10 +343,8 @@ module PlotFunctions
 		bgCorrectedTraces = measResult.Traces .- background
 
 		fig=figure()
-		ax = subplot(111)
+		ax = subplot(subplotlayout)
 		semilogy(Dates.unix2datetime.(InterpolationFunctions.averageSamples(Dates.datetime2unix.(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
-		#semilogy(Dates.unix2datetime(InterpolationFunctions.averageSamples(Dates.datetime2unix(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
-
 		startTimeString = Dates.format(measResult.Times[1],"yyyy/mm/dd")
 		endTimeString = Dates.format(measResult.Times[end],"yyyy/mm/dd")
 		title("$startTimeString - $endTimeString")
@@ -183,12 +356,12 @@ module PlotFunctions
 			for i = 1:length(measResult.MasslistMasses)
 			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i],ion = "H+"))")
 			end
-		elseif ion=="NH4+"
+		elseif ion in ["NH4+","NH3.H+", "NH3H+"]
 			for i = 1:length(measResult.MasslistMasses)
-			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "NH4+"))")
+			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "NH3H+"))")
 			end
 		end
-
+		
 		box = ax.get_position()
 		cols = 1
 
@@ -277,8 +450,7 @@ module PlotFunctions
 
 		fig=figure()
 		ax = subplot(111)
-		semilogy(Dates.unix2datetime.(InterpolationFunctions.averageSamples(Dates.datetime2unix.(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
-		#semilogy(Dates.unix2datetime(InterpolationFunctions.averageSamples(Dates.datetime2unix(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
+		semilogy(Dates.unix2datetime.(InterpolationFunctions.averageSamples(Dates.datetime2unix.(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol)
 
 		startTimeString = Dates.format(measResult.Times[1],"yyyy/mm/dd")
 		endTimeString = Dates.format(measResult.Times[end],"yyyy/mm/dd")
@@ -292,9 +464,9 @@ module PlotFunctions
 			  name = MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "H+")
 			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(name)")
 			end
-		elseif ion=="NH4+"
+		elseif ion in ["NH4+", "NH3.H+","NH3H+"]
 			for i = 1:length(measResult.MasslistMasses)
-			  name = MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "NH4+")
+			  name = MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "NH3H+")
 			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(name)")
 			end
 		end
@@ -312,7 +484,7 @@ module PlotFunctions
 		    savefig(joinpath(dirname(tracesfile),savefigname))
 		    println("saved figure as $(savefigname) in the data folder.")
 		end
-		return fig,ax,measResult
+		return fig,ax,measResult,legStrings
 	end
 
 
@@ -375,11 +547,11 @@ module PlotFunctions
 
 
 	"""
-	    scatter_errorbar(measResult::ResultFileFunctions.MeasurementResult,xdata::Vector,ydata::AbstractArray,yerr::Matrix;ion="H+")
+	    scatter_errorbar(measResult::ResultFileFunctions.MeasurementResult,xdata::Vector,ydata::Matrix,yerr::Matrix;ion="H+")
 
 	plots traces as averaged datapoints with their repective given errors
 	"""
-	function scatter_errorbar(fig,measResult::ResultFileFunctions.MeasurementResult,xdata::Vector,ydata::AbstractArray,yerr::Matrix;ion="H+")
+	function scatter_errorbar(fig,measResult::ResultFileFunctions.MeasurementResult,xdata::Vector,ydata::Matrix,yerr::Matrix;ion="H+")
 		ax = subplot(111)
 		legStrings = []
 		if ion in ["all","H+","H3O+"]
@@ -409,127 +581,86 @@ module PlotFunctions
 
 	returns a DataFrame, containing stage times and descriptions
 	"""
-	function plotStages(file::String; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = true, headerrow = 1, textoffset = 0.75, vlinecolor = "k")
+	function plotStages(file::String; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = true, headerrow = 1, textoffset = 0.75, vlinecolor = "k",fontsize=8)
 		data = DataFrame(CSV.File(file, header = headerrow))
-		if CLOUDruntable
+		return plotStages(data; axes = axes, starttime=starttime,  endtime=endtime, CLOUDruntable = CLOUDruntable, headerrow = headerrow, textoffset = textoffset, vlinecolor = vlinecolor,fontsize=fontsize)
+	end
+
+    """
+        plotStages(data::DataFrame; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = true, headerrow = 1, textoffset = 0.75, vlinecolor = \"k\")
+
+    expects a CSV file containing start times for the stages (minimal requirement) and an axis to update
+
+    updates the plot by adding vertical lines and the description for each stage.
+    If CLOUDruntable ==false, a user dialogue will set the column names to display.
+
+    returns a DataFrame, containing stage times and descriptions
+    """
+    function plotStages(data::DataFrame; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = false, headerrow = 1, textoffset = 0.75, vlinecolor = "k",fontsize=8)
+        if CLOUDruntable
 			datetime = Dates.DateTime.(data.Start, "yyyy/mm/dd HH:MM:SS")
 		else
 			if ("year" in names(data)) && ("month" in names(data)) && ("day" in names(data)) && ("hour" in names(data)) && ("minute" in names(data))
 				datetime = Dates.DateTime.(data.year, data.month, data.day, data.hour, data.minute)
-			elseif (("datetime" ||  "DateTime") in names(data))
+			elseif ("datetime" in names(data)) |  ("DateTime" in names(data))
 				println(data.datetime[1])
 				println("What is the timestringformat of this datetime stamp?")
 				formatString = readline()
 				datetime = Dates.DateTime.(data.datetime, formatString)
 			elseif ("unixtime" in names(data))
 				datetime = Dates.unix2datetime.(data.unixtime)
+			elseif ("times" in names(data))
+				datetime = data.times
 			end
 		end
-		if (starttime != DateTime(0)) && (endtime != DateTime(0))
-			show = starttime .< datetime .< endtime
-		else
-			show = trues(length(datetime))
-		end
-		stagestimes = datetime[show]
-		if typeof(axes) == PyCall.PyObject
-		    axvline.(stagestimes, color = vlinecolor)
-		end
-		if CLOUDruntable
-			strings2display = string.(data[show,"Run number"], " ",data[show,"Description"],"   ")
-		else
-			println("These are the available column names:\n", names(data), "\n  -> Which column do you want to display?")
-			columnString1 = readline()
-			println("Do you want to print further columns for stage description? Answer with 'y' or 'yes'")
-			answer = readline()
-			columnStrings = [columnString1]
-			i = 1
-			while (answer in ["y","yes"]) && (i < 3)
-				println("Which one?")
-				colstr = readline()
-				push!(columnStrings,colstr)
-				println("Another one?")
-				answer = readline()
-				i = i+1
-			end
-			if answer in ["y","yes"]
-				println("Please choose not more than 3 columns.")
-			end
-			if length(s) == 1
-				strings2display = data[show,columnStrings[1]] .* "   "
-			elseif length(s) == 2
-				strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* "   "
-			elseif length(s) == 3
-				strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* " " .* data[show,columnStrings[3]] .* "   "
-			else
-				println("no descriptions will be displayed")
-			end
-		end
-		if typeof(axes) == PyCall.PyObject
-		    text.(stagestimes, #+Dates.Minute(5),
-				axes.get_ylim()[1]*2,
-				strings2display,
-				rotation=90)
-        end
-		return DataFrame(times=stagestimes,description=strings2display)
-	end
-
-    """
-    plotStages(stages::DataFrame, axes; starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = true, headerrow = 1, textoffset = 0.75, vlinecolor = \"k\")
-
-expects a CSV file containing start times for the stages (minimal requirement) and an axis to update
-
-updates the plot by adding vertical lines and the description for each stage.
-if CLOUDruntable == true, it will stick to the standard CLOUD runtable column names.
-If CLOUDruntable ==false, a user dialogue will set the column names to display.
-
-returns a DataFrame, containing stage times and descriptions
-"""
-function plotStages(data::DataFrame, axes; starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = true, headerrow = 1, textoffset = 0.75, vlinecolor = "k")
-    datetime = data.times
-    if (starttime != DateTime(0)) && (endtime != DateTime(0))
-        show = starttime .< datetime .< endtime
-    else
-        show = trues(length(datetime))
-    end
-    stagestimes = datetime[show]
-    axvline.(stagestimes, color = vlinecolor)
-    if CLOUDruntable
-        strings2display = string.(data[show,"Run number"], " ",data[show,"Description"],"   ")
-    else
-        println("These are the available column names:\n", names(data), "\n  -> Which column do you want to display?")
-        columnString1 = readline()
-        println("Do you want to print further columns for stage description? Answer with 'y' or 'n'")
-        answer = readline()
-        columnStrings = [columnString1]
-        i = 1
-        while (answer in ["y","yes"]) && (i < 3)
-            println("Which one?")
-            colstr = readline()
-            push!(columnStrings,colstr)
-            println("Another one?")
-            answer = readline()
-            i = i+1
-        end
-        if answer in ["y","yes"]
-            println("Please choose not more than 3 columns.")
-        end
-        if length(columnStrings) == 1
-            strings2display = data[show,columnStrings[1]] .* "   "
-        elseif length(columnStrings) == 2
-            strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* "   "
-        elseif length(columnStrings) == 3
-            strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* " " .* data[show,columnStrings[3]] .* "   "
+        
+        if (starttime != DateTime(0)) && (endtime != DateTime(0))
+            show = starttime .< datetime .< endtime
         else
-            println("no descriptions will be displayed")
+            show = trues(length(datetime))
         end
+        stagestimes = datetime[show]
+        if axes !== NaN
+        	axvline.(stagestimes, color = vlinecolor)
+       	end
+        if CLOUDruntable
+            strings2display = string.(data[show,"Run number"], " ",data[show,"Description"],"   ")
+        else
+            println("These are the available column names:\n", names(data), "\n  -> Which column do you want to display?")
+            columnString1 = readline()
+            println("Do you want to print further columns for stage description? Answer with 'y' or 'n'")
+            answer = readline()
+            columnStrings = [columnString1]
+            i = 1
+            while (answer in ["y","yes"]) && (i < 3)
+                println("Which one?")
+                colstr = readline()
+                push!(columnStrings,colstr)
+                println("Another one?")
+                answer = readline()
+                i = i+1
+            end
+            if answer in ["y","yes"]
+                println("Please choose not more than 3 columns.")
+            end
+            if length(columnStrings) == 1
+                strings2display = data[show,columnStrings[1]] .* "   "
+            elseif length(columnStrings) == 2
+                strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* "   "
+            elseif length(columnStrings) == 3
+                strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* " " .* data[show,columnStrings[3]] .* "   "
+            else
+                println("no descriptions will be displayed")
+            end
+        end
+        if axes !== NaN
+		    text.(stagestimes, #+Dates.Minute(5),
+		            axes.get_ylim()[1]*2,
+		            strings2display,
+		            rotation=90,fontsize=fontsize)
+		end
+        return DataFrame(times=stagestimes,description=strings2display)
     end
-    text.(stagestimes, #+Dates.Minute(5),
-            axes.get_ylim()[1]*2,
-            strings2display,
-            rotation=90)
-
-    return DataFrame(times=stagestimes,description=strings2display)
-end
 
 	function matplotlib2datetime(time::Number)
 	  	tymd = Dates.yearmonthday.(time)
@@ -549,8 +680,16 @@ end
   	return datetimestamp
   	end
 
-  	function load_plotLicorData(humfile;ax="None")
-	  	humdat=DataFrame(CSV.File(humfile, header = 1))
+	"""
+		load_plotLicorData(humfile;ax="None", header=1)
+		
+	loads and plots the given licor file. 
+	
+	- header gives the line, in which the header is located (typically ==1 or ==2)
+	- if ax (PyCall.PyObject) is given, it will plot the data in that axis, else, if will create a new figure
+	"""
+  	function load_plotLicorData(humfile;ax="None", header=1)
+	  	humdat=DataFrame(CSV.File(humfile, header = header))
 	  	humtime = humdat[!,"System_Date_(Y-M-D)"] .+ humdat[!,"System_Time_(h:m:s)"]
 	  	humdat[!,"DateTime"] = humtime
 	  	if ax == "None"
@@ -570,6 +709,9 @@ end
   	return humdat
   	end
 
+############################
+# start of interactive plots
+############################
 
 	mutable struct InteractivePlot
 	   figure::PyPlot.Figure

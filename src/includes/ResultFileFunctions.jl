@@ -5,9 +5,15 @@ module ResultFileFunctions
 	import  ..MasslistFunctions
 	import ..InterpolationFunctions
 
-	export MeasurementResult, joinResultsTime, joinResultsMasses, getTraces, getTimetraces, transposeStickCps, getNbrTraces, getTraceSamples, getNbrTraceSamples, findChangingMasses, findVaryingMasses, saturationFromComposition, getIndicesInTimeframe
+	export MeasurementResult, copyResult, joinResultsTime, joinResultsMasses, getTraces, getTimetraces, transposeStickCps, getNbrTraces, getTraceSamples, getNbrTraceSamples, findChangingMasses, findVaryingMasses, saturationFromComposition, getIndicesInTimeframe
 
 	#type MeasurementResult
+	"""
+	    MeasurementResult
+	
+	Defines a data structure (composite data type) containing the subvariables Times, MasslistMasses, MasslistElements, MasslistElementsMasses, MasslistCompositions, and Traces
+	that can be accessed via '.'-notation.
+	"""
 	mutable struct MeasurementResult
 	    Times
 	    MasslistMasses
@@ -16,8 +22,28 @@ module ResultFileFunctions
 	    MasslistCompositions
 	    Traces
 	end
-
-	function joinResultsTime(firstResult::MeasurementResult, secondResult::MeasurementResult)
+	
+	"""
+	    copyResult(mres::MeasurementResult)
+	    
+	Copies the fields of a MeasurementsResult into a new one.
+	"""
+	copyResult(mres::MeasurementResult) = MeasurementResult(
+        mres.Times, 
+        mres.MasslistMasses, 
+        mres.MasslistElements, 
+        mres.MasslistElementsMasses, 
+        mres.MasslistCompositions, 
+        mres.Traces)
+	
+    """
+        joinResultsTime!(firstResult::MeasurementResult, secondResult::MeasurementResult)
+        
+    Joins two MeasurementResult together into one along the time axis, thereby adjusting firstResult.
+    
+    Note, that this is only possible, when they have the same Masslist.
+    """
+	function joinResultsTime!(firstResult::MeasurementResult, secondResult::MeasurementResult)
 	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
             if (firstResult.MasslistMasses == secondResult.MasslistMasses)
                 firstResult.Times = vcat(firstResult.Times, secondResult.Times)
@@ -25,28 +51,71 @@ module ResultFileFunctions
                 firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
                 return firstResult
             else
-                println("Masses did not match, could not merge results!")
+                @warn "Masses did not match, could not merge results!"
             end
 	    end
 	end
-
-	function joinResultsMasses(firstResult::MeasurementResult, secondResult::MeasurementResult)
+	
+	"""
+        joinResultsTime(firstResult::MeasurementResult, secondResult::MeasurementResult)
+        
+    Joins two MeasurementResult together into one along the time axis, returning a new MeasurementResult.
+    
+    Note, that this is only possible, when they have the same Masslist.
+    """
+	function joinResultsTime(firstResult::MeasurementResult, secondResult::MeasurementResult)
+	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
+            if (firstResult.MasslistMasses == secondResult.MasslistMasses)
+                combinedResult = copyResult(firstResult)
+                combinedResult.Times = vcat(firstResult.Times, secondResult.Times)
+                # firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
+                combinedResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
+                return combinedResult
+            else
+                @warn "Masses did not match, could not merge results!"
+            end
+	    end
+	end
+	
+    """
+        joinResultsMasses!(firstResult::MeasurementResult, secondResult::MeasurementResult;
+            returnLabeling=false,firstResultLabeling=(zeros(length(firstResult.MasslistMasses))),resultN=1)
+        
+    Returns two MeasurementResults joined together into one along the mass axis, sorting the masses. Thereby it will not remove double mass entries and the change is applied directly to firstResult.
+    
+    The function does allow for returning additionally an array that contains labelling, which mass came from which MeasurementResult.
+    By additionally giving a previous labelling array via firstResultLabelling, this function can be used multiple times consecutively, 
+    e.g. to create a single MeasurementResult from the data of multiple instruments.
+    """
+	function joinResultsMasses!(firstResult::MeasurementResult, secondResult::MeasurementResult;
+	    returnLabeling=false,firstResultLabeling=(zeros(length(firstResult.MasslistMasses))),resultN=1)
 	    if (length(firstResult.MasslistMasses) > 0) & (length(secondResult.MasslistMasses) > 0)
             if (firstResult.Times == secondResult.Times)
                 firstResult.MasslistMasses = vcat(firstResult.MasslistMasses, secondResult.MasslistMasses)
+                labelArray = vcat(firstResultLabeling,resultN*ones(length(firstResult.MasslistMasses)))
                 firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
                 firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
                 sorter = sortperm(firstResult.MasslistMasses)
                 firstResult.MasslistMasses = firstResult.MasslistMasses[sorter]
+                labelArray = labelArray[sorter]
                 firstResult.MasslistCompositions = firstResult.MasslistCompositions[:,sorter]
                 firstResult.Traces = firstResult.Traces[:,sorter]
-                return firstResult
+                if returnLabeling
+                    return firstResult,labelArray
+                else
+                    return firstResult
+                end
             else
-            println("Times did not match, could not merge results!")
+                @warn "Times did not match, could not merge results!"
             end
 	    end
 	end
 
+    """
+        loadResults(filename; useAveragesOnly = false, raw = false, startTime::DateTime = DateTime(0), endTime::DateTime = DateTime(3000), massesToLoad=Array{Float64,1}(), massMatchTolerance = 0.00001, masslistOnly = false)
+        
+    Loads the data from a TOF measurement result file (.hdf5) and returns them in the format of a MeasurementResult struct
+    """
 	function loadResults(filename; useAveragesOnly = false, raw = false, startTime::DateTime = DateTime(0), endTime::DateTime = DateTime(3000), massesToLoad=Array{Float64,1}(), massMatchTolerance = 0.00001, masslistOnly = false)
 	    println("Loading Times:")
 	  if useAveragesOnly
@@ -94,11 +163,11 @@ module ResultFileFunctions
 	  if length(massesToLoad) > 0
 	      selectionMassesIndices = Array{Int,1}()
 	      for i=1:length(masslistMasses)
-		for j=1:length(massesToLoad)
-		  if (isapprox(masslistMasses[i], massesToLoad[j], atol=massMatchTolerance))
-		    push!(selectionMassesIndices, i)
-		  end
-		end
+		    for j=1:length(massesToLoad)
+		      if (isapprox(masslistMasses[i], massesToLoad[j], atol=massMatchTolerance))
+		        push!(selectionMassesIndices, i)
+		      end
+		    end
 	      end
 	  else
 	      selectionMassesIndices=1:length(masslistMasses)
@@ -138,8 +207,8 @@ module ResultFileFunctions
 ###########################MeasurementResult end #########################
 
 	function getIndicesInTimeframe(filename, startTime::DateTime, endTime::DateTime)
-	  times = HDF5.h5read(filename, "Times")
-	  return (1:length(times))[(times.>startTime) & (times.<endTime)]
+	  times = Dates.unix2datetime.(HDF5.h5read(filename, "Times"))
+	  return (1:length(times))[(times.>startTime) .& (times.<endTime)]
 	end
 
 	function getTraces(filename; timeIndexStart=1, timeIndexEnd=0, massIndices=nothing, raw=false,  useAveragesOnly = false)
@@ -214,7 +283,14 @@ module ResultFileFunctions
 	  return result
 	end
 
-
+    """
+        getTimetraces(filename, indices; raw=false)
+        
+    Directly reads the time traces for selected indices along the Masslist axis from the file.
+    
+    With raw=true, you get the raw cps for that mass.
+    Default: (raw=false) gives the multipeakfit-corrected data after deconvolution
+    """
 	function getTimetraces(filename, indices; raw=false)
 	  fh = HDF5.h5open(filename,"r")
 	  if raw
@@ -286,8 +362,12 @@ module ResultFileFunctions
 	  close(fh)
 	  GC.gc()
 	end
-
-
+	
+    """
+        getTraceSamples(filename, indices; raw=false)
+        
+    Returns a subset of all mass traces for the time indices given as Bitarray or an array of floats.
+    """
 	function getTraceSamples(filename, indices; raw=false)
 	  fh = HDF5.h5open(filename,"r")
 	  if raw
@@ -323,6 +403,11 @@ module ResultFileFunctions
 	  return result
 	end
 
+    """
+        getNbrTraces(filename)
+        
+    Returns the number of available traces in that file (masslist dimension!)
+    """
 	function getNbrTraces(filename)
 	  fh = HDF5.h5open(filename,"r")
 	  ds = fh["StickCps"]
@@ -330,7 +415,12 @@ module ResultFileFunctions
 	  close(fh)
 	  return nbr
 	end
-
+	
+    """
+        getNbrTraceSamples(filename)
+        
+    Returns the number of available samples in that file (time dimension!)
+    """
 	function getNbrTraceSamples(filename)
 	  fh = HDF5.h5open(filename,"r")
 	  ds = fh["StickCps"]
@@ -339,43 +429,51 @@ module ResultFileFunctions
 	  return nbr
 	end
 
-	function findChangingMasses(masses, compositions, traces, times, bgTimesSelection, signalTimesSelection; minOxygen = 0, sigmaThreshold=3, sorting = "mean", noNitrogen = true, onlySaneMasses = true, filterCrosstalkMasses=true)
+    """
+        findChangingMasses(masses, compositions, traces, times, bgTimesSelection, signalTimesSelection; minOxygen = 0, sigmaThreshold=3, sorting = "mean", noNitrogen = true, onlySaneMasses = true, filterCrosstalkMasses=true, resolution=8000)
+    
+    Returns a tuple of arrays (indices,means values of change,standarddeviation) of all selected peaks that have a >sigmaThreshold change between given signal and background periods.
+    
+    bgTimesSelection should be given in the form (datetime1.< times .< datetime1).
+    sorting of the resulting arrays can be performed either via the mean values of change (sorting = "mean") or the masses (sorting="mass"). 
+    onlySaneMasses = true adds a filter option to consider only compositions with ratios of 1.3 < H:C < 2.2 and O:C < 1.5  (note: this can be too restrictive in some cases)
+    """
+	function findChangingMasses(masses, compositions, traces, times, bgTimesSelection, signalTimesSelection; minOxygen = 0, sigmaThreshold=3, sorting = "mean", noNitrogen = true, onlySaneMasses = true, filterCrosstalkMasses=true, resolution=8000)
 	  bgTraces = traces[bgTimesSelection,:]
 	  sigTraces = traces[signalTimesSelection,:]
-	  meansBG = mean(bgTraces,1)[1,:]
-	  meansBG[meansBG.<=0] = 1e-99
-	  means = mean(sigTraces,1)[1,:] - meansBG
+	  meansBG = vec(Statistics.mean(bgTraces;dims=1))
+	  meansBG[meansBG.<=0] .= 1e-99
+	  means = vec(Statistics.mean(sigTraces;dims=1)) - meansBG
 	  println("Means received: $(size(means))")
 	  if size(bgTraces,1) < 3
-	    println("Not enough BG points for standard deviation! plotHighTimeRes = true ?")
+	    @warn "Not enough BG points for standard deviation! plotHighTimeRes = true ?"
 	  end
 
-	  stderror = std(bgTraces,1)[1,:] ./ sqrt(size(bgTraces,2))
+	  stderror = vec(Statistics.std(bgTraces;dims=1)) ./ sqrt(size(bgTraces,2))
 
 	  selMasses =  (means .> sigmaThreshold*stderror)
 	  if filterCrosstalkMasses
 	      # Filter out crosstalk masses
-	      s = MasslistFunctions.filterMassListByContribution2(masses, means, 5000, 0.05)
+	      s = MasslistFunctions.filterMassListByContribution2(masses, means, resolution, 0.05)
 	      selMasses = selMasses .& s
-          println("\nRemoving $(length(masses[!s])) masses")
+          println("\nRemoving $(length(masses[.!s])) masses")
 	  end
 
 	  if noNitrogen == true
-	    selMasses = selMasses & (compositions[5,:] .== 0)
+	    selMasses = selMasses .& (compositions[5,:] .== 0)
 	  end
 
-	  selMasses = selMasses & (compositions[6,:] .>= minOxygen)
-	  #selMasses = selMasses| ((masses.>137.1) & (masses.<137.15))
+	  selMasses = selMasses .& (compositions[6,:] .>= minOxygen)
 
 	  ## Filter only sane masses
 	  if onlySaneMasses
-	    selMasses = selMasses & (compositions[3,:] .> 1*compositions[1,:]) # H:C > 1.3
-	    selMasses = selMasses & (compositions[3,:] .< 2.2*compositions[1,:]) # H:C < 2.2
-	    selMasses = selMasses & (compositions[6,:] .< 1.5*compositions[1,:]) # O:C < 1.5
+	    selMasses = selMasses .& (compositions[3,:] .> 1*compositions[1,:]) # H:C > 1.3
+	    selMasses = selMasses .& (compositions[3,:] .< 2.2*compositions[1,:]) # H:C < 2.2
+	    selMasses = selMasses .& (compositions[6,:] .< 1.5*compositions[1,:]) # O:C < 1.5
 	  end
 	  println("Selected $(sum(ones(length(masses))[selMasses])) masses!")
 
-	  selIndices = linearindices(masses)[selMasses]
+	  selIndices = LinearIndices(masses)[selMasses]
 	  if sorting == "mean"
 	      println("Sorting masses by mean value!")
 	      sorter = sortperm(means[selMasses], rev=true)
@@ -384,13 +482,23 @@ module ResultFileFunctions
 	    sorter = sortperm(masses[selMasses], rev=false)
 	  else
 	      println("Not sorting.")
-	    sorter = linearindices(masses)
+	    sorter = LinearIndices(masses)
 	  end
 
 	  return selIndices[sorter], means[selIndices[sorter]], stderror[selIndices[sorter]]
 	end
 
-	function findVaryingMasses(masses, compositions, traces; minOxygen = 0, sigmaThreshold=3, sorting = "mean", noNitrogen = true, onlySaneMasses = true, filterCrosstalkMasses=true)
+    """
+        findVaryingMasses(masses, compositions, traces; 
+            minOxygen = 0, sigmaThreshold=3, sorting = "mean", noNitrogen = true, onlySaneMasses = true, filterCrosstalkMasses=true, resolution = 8000)
+
+    Returns a tuple of arrays (indices,means values of change,standarddeviation) of all selected peaks that have a variance larger than the standarddeviation of the trace after correcting for its mean (smoothed trace over 100 datapoints).
+    
+    bgTimesSelection should be given in the form (datetime1.< times .< datetime1).
+    sorting of the resulting arrays can be performed either via the mean values of change (sorting = "mean") or the masses (sorting="mass")        
+    
+    """
+	function findVaryingMasses(masses, compositions, traces; minOxygen = 0, sigmaThreshold=3, sorting = "mean", noNitrogen = true, onlySaneMasses = true, filterCrosstalkMasses=true, resolution = 8000, pointsForSmoothing = 100)
 	  means = Statistics.mean(traces,dims=1)[1,:]
 	  means[means .<= 0] .= 1e-99
 
@@ -399,22 +507,21 @@ module ResultFileFunctions
 	    println("Not enough points for variance! plotHighTimeRes = true ?")
 	  end
 
-	  tracesPrime = traces - InterpolationFunctions.smooth(traces, 0.01)
+	  tracesPrime = traces - InterpolationFunctions.smooth(traces, 1/pointsForSmoothing)
 	  stderror = Statistics.std(tracesPrime,dims=1)[1,:] ./ sqrt(size(traces,2))
-	  variances = Statistics.var(traces,dims=1)[1,:]
+	  variances = Statistics.var(InterpolationFunctions.smooth(traces, 1/pointsForSmoothing),dims=1)[1,:] # Statistics.var(traces,dims=1)[1,:]
 	  lastCount = length(masses)
 
 	  selMasses =  (means .> sigmaThreshold*stderror)
 	  println("Removed $(lastCount - sum(selMasses)) masses because mean<sigmaThreshold*stderr")
 	  lastCount = sum(selMasses)
-	  selMasses = selMasses .& (variances .> means .* sigmaThreshold)
-
-	  println("Removed $(lastCount - sum(selMasses)) masses because variance<sigmaThreshold*mean")
+	  selMasses = selMasses .& (variances .> stderror .* sigmaThreshold .* 2) # selMasses = selMasses .& (variances .> means .* sigmaThreshold) 
+	  println("Removed $(lastCount - sum(selMasses)) masses because variance>sigmaThreshold*stderror")
 	  lastCount = sum(selMasses)
 
 	  if filterCrosstalkMasses
 	      # Filter out crosstalk masses
-	      s = MasslistFunctions.filterMassListByContribution2(masses, means, 5000, 0.05)
+	      s = MasslistFunctions.filterMassListByContribution2(masses, means, resolution, 0.05)
 	      selMasses = selMasses .& s
 
           println("\nRemoved $(lastCount - sum(selMasses)) masses because of crosstalk with neighbors")
@@ -444,14 +551,17 @@ module ResultFileFunctions
 	  elseif sorting == "mass"
 	      println("Sorting masses!")
 	    sorter = sortperm(masses[selMasses], rev=false)
+	  elseif sorting == "variance"
+	      println("Sorting masses by variance!")
+	      sorter = sortperm(variances[selMasses], rev=true)
 	  else
 	      println("Not sorting.")
-	    sorter = linearindices(masses)
+	    sorter = LinearIndices(masses)
 	  end
 
-	  return selIndices[sorter], means[selIndices[sorter]], stderror[selIndices[sorter]]
+	  return selIndices[sorter], variances[selIndices[sorter]], stderror[selIndices[sorter]]
 	end
-
+#=
 	function saturationFromComposition(compositions)
 	  #return exp(10)*50000*exp.(-compositions[6,:]*5).*exp.(-compositions[1,:])
 	  n_C = float(compositions[1,:])
@@ -462,4 +572,5 @@ module ResultFileFunctions
 
 	  return 10 .^((25-n_C)*0.475-n_O.*(2.3-b_add)-2 .*(n_C.*n_O./(n_C+n_O))*(-0.3))
 	end
+=#
 end

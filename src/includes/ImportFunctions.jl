@@ -40,13 +40,13 @@ end
 
 function importExportedTraces(fptraces,fpcompositions;nrElements = 8)
     nrheaderlines = parse(Int64,split(readlines(fptraces)[1],"\t")[2])
-    data = DataFrame(CSV.File(fptraces, header = nrheaderlines))
+    data = DataFrame(CSV.File(fptraces, header = nrheaderlines+1))
     nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
-    compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines))
+    compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines+1))
     times = data.Time
     masslistMasses = values(compdata[!,"Mass"])
     masslistElements = names(compdata)[1:nrElements]
-    masslistElementsMasses = [MasslistFunctions.elementmassDict[el] for el in masslistElements]
+    masslistElementsMasses = [MasslistFunctions.elementsMassesDict[el] for el in masslistElements]
     masslistCompositions = transpose(Matrix(compdata[!,1:nrElements]))
     traces = Matrix(data[!,3:end])
 return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces)
