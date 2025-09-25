@@ -77,7 +77,7 @@ module ExportFunctions
 	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, headers = ("",""), ion = "H+", average=0,filenameAddition="_CLOUDheader")
 	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions$(filenameAddition).txt")
 	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces$(filenameAddition).csv")
-	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions; ion = ion)
+	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions; elements=elementNames, ion = ion)
 	  f = open(joinpath(saveFolderPath,"ptr3compositions$(filenameAddition).txt"), "w")
 	  write(f, headers[2])
 	  if transmission != 0

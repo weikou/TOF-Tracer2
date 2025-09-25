@@ -36,28 +36,35 @@ module PlotFunctions
 	colorbarticklabels=[],
 	colorbarextend="neither", # other options: "both","max"
 	"""
-	function massDefectPlot(masses, compositions, concentrations, colors; plotTitle = " ", colorCodeTitle = " ", dotSize = 10, maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false, ionization = "H+", scaleAreaLinearly=false, colormap="viridis",norm=0, colorbarticks=[],colorbarticklabels=[], colorbarextend="neither",newfigure=true)
+	function massDefectPlot(masses, compositions, concentrations, colors; plotTitle = " ", colorCodeTitle = " ", dotSize = 10, marker="o", maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false, ionization = "H+", scaleAreaLinearly=false, colormap="viridis",norm=0, colvmin=0, colvmax=1, colorbarticks=[],colorbarticklabels=[], colorbarextend="neither",newfigure=true, connectingLines=false, cutoffAtminConc = true, showColorbar=true, showLegend=true)
 	  if newfigure
 	    fig = figure()
       end
         
 	  h2o = MasslistFunctions.createCompound(H=2,O=1, Hplus=0)
 	  o = MasslistFunctions.createCompound(O=1, Hplus=0)
-
-	  f = concentrations .> 0
-	  for i=1:length(masses[f])
-	    m = masses[f][i]
-	    adduct = h2o
-	    if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions[:,f]))
-	      m1 = m + adduct[1]
-	      plot([m, m1], [m-round(m), m1 - round(m1)], color="lightblue", zorder=1)
-	    end
-	    adduct = o
-	    if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions[:,f]))
-	      m1 = m + adduct[1]
-	      plot([m, m1], [m-round(m), m1 - round(m1)], color="red", zorder=1)
-	    end
-	    if sumformulas text(masses[f][i],masses[f][i]-round(masses[f][i]),MasslistFunctions.sumFormulaStringFromCompositionArray(compositions[:,f][:,i]; ion = ionization), color="grey", clip_on=true, verticalalignment="center", size=10, zorder=100) end
+	  o2 = MasslistFunctions.createCompound(O=2, Hplus=0)
+	  if cutoffAtminConc
+	  	f = concentrations .> minConc
+	  else
+	  	f = concentrations .> 0
+	  end
+	  if sumformulas | connectingLines
+		  for i=1:length(masses[f])
+		    if concentrations[f][i] >= minConc
+				m = masses[f][i]
+				adducts = [o,o2]
+				for adduct in adducts
+					if (MasslistFunctions.inCompositions(compositions[:,i] + adduct[4], compositions[:,f]))
+					  m1 = m + adduct[1]
+					  if any(concentrations[round.(masses,digits=2) .== round(m1,digits=2)] .> minConc)
+					  	plot([m, m1], [m-round(m), m1 - round(m1)], color="grey", lw=0.5, zorder=1)
+					  end
+					end
+				end
+			 end
+				if sumformulas text(masses[f][i],masses[f][i]-round(masses[f][i]),MasslistFunctions.sumFormulaStringFromCompositionArray(compositions[:,f][:,i]; ion = ionization), color="grey", clip_on=true, verticalalignment="center", size=10, zorder=100) end
+		  end
 	  end
       if scaleAreaLinearly
     	  # scatter with linear size
@@ -66,22 +73,22 @@ module PlotFunctions
 	      # I.e. doubling the underlying quantity should double the area of the marker.
 	      # dotsize might need adjustment!
 	      if norm == 0
-	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap])
+	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], vmin=colvmin,vmax=colvmax, marker=marker)
 	      else
-	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], norm=norm)
+	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], norm=norm, marker=marker)
 	      end
 	      maxsize = round(Statistics.maximum(concentrations[f]);sigdigits=2)
 	      minsize = round(minConc;sigdigits=1)
 	      msizes = dotSize.*round.(10 .^ range(log10(minsize),stop=log10(maxsize),step=1);sigdigits=2)
 	      for i in 1:length(msizes)
-	        scatter([],[],s=msizes[i], color = "k", label=string(msizes[i]), alpha = 0.5, edgecolors="dimgrey")
+	        scatter([],[],s=msizes[i], color = "k", label=string(msizes[i]), alpha = 0.5, edgecolors="dimgrey", marker=marker)
 	      end
 	  else
 	      # scaling area with sqrt(conc) makes sense, when the sizes scale over many orders of magnitude
 	      if norm == 0
-	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap])  
+	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], vmin=colvmin,vmax=colvmax, marker=marker)  
 	      else
-	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap],norm=norm)   
+	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap],norm=norm, marker=marker)   
 	      end
 	      maxsize = round(sqrt.(Statistics.maximum(concentrations[f]));sigdigits=1)
 	      minsize = round(sqrt.(minConc);sigdigits=1)
@@ -90,31 +97,37 @@ module PlotFunctions
 	      nrsteps = floor(log10(maxval/minval))
 	      mvalues = (round.(10 .^ range(log10(maxval/10^nrsteps),stop=log10(maxval),step=1.0);sigdigits=1))
       	  msizes = dotSize .* sqrt.(mvalues)
-      	  for i=1:length(msizes)
-      	    scatter([],[],s=msizes[i], color = "k", label=string(mvalues[i]), alpha = 0.5, edgecolors="dimgrey")
+	  	  if showLegend
+		  	  for i=1:length(msizes)
+		  	    scatter([],[],s=msizes[i], color = "k", label=string(mvalues[i]), alpha = 0.5, edgecolors="dimgrey", marker=marker)
+		  	  end
       	  end
-      	  
 	  end
 	  xlim(0,maxMass)
 	  ylim(0,maxDefect)
-	  if (length(colorbarticks)>1) && (colorbarextend != "neither")
-	        cb=colorbar(s,ticks=colorbarticks;extend=colorbarextend)
-	        cb["ax"]["set_yticklabels"](colorbarticklabels)
-	    elseif colorbarextend != "neither"
-	        cb=colorbar(s;extend=colorbarextend)
-	    elseif length(colorbarticks)>1 
-	        cb=colorbar(s,ticks=colorbarticks)
-	        cb["ax"]["set_yticklabels"](colorbarticklabels)
-	    else
-	        cb = colorbar(s)
-	    end
-	  cb["ax"]["set_ylabel"](colorCodeTitle)
+	  if showColorbar
+	  	if (length(colorbarticks)>1) && (colorbarextend != "neither")
+		    cb=colorbar(s,ticks=colorbarticks;extend=colorbarextend)
+		    cb["ax"]["set_yticklabels"](colorbarticklabels)
+		elseif colorbarextend != "neither"
+		    cb=colorbar(s;extend=colorbarextend)
+		elseif length(colorbarticks)>1 
+		    cb=colorbar(s,ticks=colorbarticks)
+		    cb["ax"]["set_yticklabels"](colorbarticklabels)
+		else
+		    cb = colorbar(s)
+		end
+	  	cb["ax"]["set_ylabel"](colorCodeTitle)
+	  end
 	  xlabel("Mass [amu]")
 	  ylabel("Kendrick Mass Defect")
 	  title(plotTitle)
 	  grid("on")
-	  legend(loc=4)
-	  return fig
+	  if showLegend
+	  	leg1 = legend(loc=4)
+	  	return leg1
+	  end
+	  # show()
 	end
 
     """
@@ -177,6 +190,7 @@ module PlotFunctions
         stagenrs=[],stageBG=2600.02,stageSignal=2600.01,scalingfactor=1,scalePoints="linear",
         colorCodeTitle=" ",colorbarticks=[],colorbarticklabels=[],colorbarextend="neither",
         cmap=PyPlot.cm["viridis"],norm=0,colvmin=0,colvmax=1,newfigure=true)
+        
         stagenrIdxBG = findfirst(x -> x == stageBG,stagenrs)
         stagenrIdxSignal = findfirst(x -> x == stageSignal,stagenrs)
         s=([values(concs[stagenrIdxSignal,:])...] .- [values(concs[stagenrIdxBG,:])...])
@@ -585,9 +599,51 @@ module PlotFunctions
 		data = DataFrame(CSV.File(file, header = headerrow))
 		return plotStages(data; axes = axes, starttime=starttime,  endtime=endtime, CLOUDruntable = CLOUDruntable, headerrow = headerrow, textoffset = textoffset, vlinecolor = vlinecolor,fontsize=fontsize)
 	end
+	
+	"""
+		plotStages_simple(datetimes, stageNames; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), textoffset = 0.75, vlinecolor = "k",fontsize=8)
+		
+	expects two arrays: one containing the times (datetime), one containing the stage names
+	axes 
+		
+	"""
+	function plotStages_simple(datetimes, stageNames; axes = [], starttime=DateTime(0),  endtime=DateTime(0), textoffset = 0.75, vlinecolor = "k",fontsize=8)		
+		if ((starttime==DateTime(0)) & (endtime==DateTime(0)))
+			if (typeof(axes) == PyCall.PyObject)
+				(starttime,endtime) = PlotFunctions.matplotlib2datetime.(axes.get_xlim())
+			elseif (typeof(axes) == Vector{PyObject})
+				println("using the datetime limits of the first given axis in the array.")
+				(starttime,endtime) = PlotFunctions.matplotlib2datetime.((axes[1]).get_xlim())
+			end
+		show = starttime .< datetimes .< endtime
+		if (length(axes) == 0) & ((starttime == DateTime(0)) & (endtime == DateTime(0)))
+			println("plotting all stages. Please set starttime and endtime, if only a subset of stages should be plotted.")
+			show = trues(length(datetimes))
+		end
+		end
+		if typeof(axes) == Vector{PyObject}
+			for ax in axes
+				ax.axvline.(datetimes[show], color = vlinecolor)
+			end
+			axes[1].text.(datetimes[show], #+Dates.Minute(5),
+		            axes[1].get_ylim()[1] + 0.9*(axes[1].get_ylim()[2] - axes[1].get_ylim()[1]),
+		            stageNames[show],
+		            rotation=90,fontsize=fontsize, va="top")
+		else 
+			if (length(axes) == 0)
+				axes = gca()
+			end
+			axes.axvline.(datetimes[show], color = vlinecolor)
+			axes.text.(datetimes[show], #+Dates.Minute(5),
+		            axes.get_ylim()[1] + 0.9*(axes.get_ylim()[2] - axes.get_ylim()[1]),
+		            stageNames[show],
+		            rotation=90,fontsize=fontsize, va="top")
+		end
+	end
+	
 
     """
-        plotStages(data::DataFrame; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = true, headerrow = 1, textoffset = 0.75, vlinecolor = \"k\")
+        plotStages(data::DataFrame; axes = NaN, starttime=DateTime(0),  endtime=DateTime(0), CLOUDruntable = false, headerrow = 1, textoffset = 0.75, vlinecolor = \"k\")
 
     expects a CSV file containing start times for the stages (minimal requirement) and an axis to update
 
@@ -611,6 +667,8 @@ module PlotFunctions
 				datetime = Dates.unix2datetime.(data.unixtime)
 			elseif ("times" in names(data))
 				datetime = data.times
+			elseif ("starttime" in names(data))
+				datetime = data.starttime
 			end
 		end
         
@@ -625,6 +683,8 @@ module PlotFunctions
        	end
         if CLOUDruntable
             strings2display = string.(data[show,"Run number"], " ",data[show,"Description"],"   ")
+        elseif ("description" in names(data))
+        	strings2display = data[show,"description"]
         else
             println("These are the available column names:\n", names(data), "\n  -> Which column do you want to display?")
             columnString1 = readline()
@@ -644,11 +704,11 @@ module PlotFunctions
                 println("Please choose not more than 3 columns.")
             end
             if length(columnStrings) == 1
-                strings2display = data[show,columnStrings[1]] .* "   "
+                strings2display = string.(data[show,columnStrings[1]]) .* "   "
             elseif length(columnStrings) == 2
-                strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* "   "
+                strings2display = string.(data[show,columnStrings[1]]) .* " " .* string.(data[show,columnStrings[2]]) .* "   "
             elseif length(columnStrings) == 3
-                strings2display = data[show,columnStrings[1]] .* " " .* data[show,columnStrings[2]] .* " " .* data[show,columnStrings[3]] .* "   "
+                strings2display = string.(data[show,columnStrings[1]]) .* " " .* string.(data[show,columnStrings[2]]) .* " " .* string.(data[show,columnStrings[3]]) .* "   "
             else
                 println("no descriptions will be displayed")
             end

@@ -577,6 +577,9 @@ end
     correctCompositionOfIonization(compositionsArr,elementList=["C","C(13)","H","H+","N","O","O(18)","S"],ionization="H+")
 
 Returns both the composition and corresponding element list after correcting them for ion composition.
+
+- elementList: An array containing all your elements
+- ionization: "H+": the ionization method. You can use also "NH3H+" or others (if using another element list. Be smart)
 """
 function correctCompositionOfIonization(compositionsArr;elementList=["C","C(13)","H","H+","N","O","O(18)","S"],ionization="H+",correctIonInComposition=true)
     # TODO: Problem: cluster ions with NH3NH4+, H2ONH4+, H2OH3O+, H+ ... might exist!!! How to deal with these???
@@ -617,7 +620,7 @@ Arguments:
 - compositions: in the form of measResult.MasslistCompositions
 - temp: Temperature (in Kelvin!)
 - mindimerC = 17: the minimum number of carbon atoms in a composition to use the dimer volatility calculation.
-- ion = "H+": the ionization method. You can use also "NH3H+" or others
+- ion = "H+": the ionization method. You can use also "NH3H+" or others (if you use another elementlist - be smart.)
 - correctIonInComposition=false: select true, if you need to correct for the ion's atoms in the given composition array. 
 """
 function log10C_T_AP_lowNOx(compositionsArr, temp; elementList = ["C","C(13)","H","H+","N","O","O(18)","S"], mindimerC = 17, ionization = "H+", correctIonInComposition=false) 
@@ -648,6 +651,7 @@ Transfer to other temperatures, using the function in Simon et al.: https://doi.
 Arguments:
 - compositions: in the form of measResult.MasslistCompositions or similar (in case of shorter element list)
 - temp: Temperature (in Kelvin!)
+- ionization: "H+": the ionization method. You can use also "NH3H+" or others (if using another element list. Be smart)
 - elementList: list of elements for the composition array
 
 """
@@ -805,7 +809,6 @@ end
 											inletLength = 0.7, chamberT=5, roomT=25, ptrT=37)
 
 Arguments:
-- masses: measResult.MasslistMasses
 - compositions: measResult.MasslistCompositions
 - flow: total flow through inlet (1/2 inch), flow measured in slpm
 - sampleflow: coresampling flow into the PTR3 (in slpm)
@@ -841,6 +844,7 @@ function calculateInletTransmission_CLOUD(compositions; elementList = ["C","C(13
 					(walllossspecies_roomT .+ radicals) ))
 	pene_in_ptr = 1.0 .- (0.6667 .* ((walllossspecies_ptrT .+ radicals) .> 0) )
 	pene_total = pene_in_ptr .* pene_out_of_chamber .* pene_in_chamber
+	pene_total[pene_total .== 0.0] .= 1.0 # for ions that have an only-zero composition (unknown species should not be inlet-loss corrected!)
 	return pene_total
 end
 
@@ -887,7 +891,15 @@ end
         savefp=""
     )
 
-TBW
+- calibDF=DataFrame containing your calibration data,
+- humparams=(Float64[],Float64[]," "),
+- cloudhum=Float64[],
+- hum4plot=collect(0:0.2:12),
+- savefp: your path for saving the plots,
+- humdepcalibRelationship: The relationship between your sensitivity "double exponential". Can also ,
+- humidityRelationship="exponential",
+- ionization: "H+": the ionization method. You can use also "NH3H+" or others (if using another element list. Be smart)
+
 """
 function plot_humdep_fromCalibParameters(;calibDF=DataFrame(),
     humparams=(Float64[],Float64[]," "),

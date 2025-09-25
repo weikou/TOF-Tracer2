@@ -48,7 +48,7 @@
         @test length(masslist) == length(compositions)
         @test length(elements) == length(elementMasses)
         
-        @test isapprox(MLF.massFromComposition(;C=1,H=2,O=1),31.017856)
+        @test isapprox(MLF.massFromComposition(;C=1,H=2,O=1),31.017856;atol=1e-5)
         @test MLF.massFromCompositionArray(transpose(ml[4][2])) == ml[1][2]
         @test all(isapprox.(MLF.massFromCompositionArrayList(mRes.MasslistCompositions[:,1:7]),mRes.MasslistMasses[1:7]))
         

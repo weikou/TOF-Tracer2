@@ -64,7 +64,7 @@ module MasslistFunctions
 	abundanceO18 = 0.002005
 	
 	
-	masslistElements = ["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"]
+	masslistElements = ["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"] # should not be changed for backwards-compatibility
 	masslistElementMasses = [massC, massC13, massH, massHplus, massN, massO, massO18, massS]
 	
     elementsMassesDict = Dict("C"=>massC, "C(13)" => massC13, 
@@ -454,44 +454,50 @@ module MasslistFunctions
                 name = name * el
             end
         end
-        name = name*"."*ion
+        if length(ion) > 0
+        	name = name*"."*ion
+        end
         return name
     end
 
     """
-        sumFormulaStringListFromCompositionArrayList(compositions; elements=masslistElements, showMass = false, ion = "H+")
+        sumFormulaStringListFromCompositionArrayList(compositions; elements=masslistElements, showMass = false, ion = "H+", correctForIon=true)
     
     Determines a sumFormulaStringFromCompositionArray(composition; elements=masslistElements, ion = "H+") for each composition in a composition matrix based on a manually defined list of elements (that does not contain the ions at best, as this function does currently not correct for this, making it not backwards-compatible!!!)  
     """
-	function sumFormulaStringListFromCompositionArrayList(compositions; elements=masslistElements, showMass = false, ion = "H+")
+	function sumFormulaStringListFromCompositionArrayList(compositions; elements=masslistElements, showMass = false, ion = "H+", correctForIon=true,classicalDimensions=true)
 	  a = 0
-	  if !(length(elements) in size(compositions))
-	      println("direction of composition matrix and elements are incompatible.")
-	  elseif findfirst(size(elements) .== size(compositions)) .!= findlast(size(elements) .== size(compositions))
-	      println("direction of composition matrix and elements could not be clearly determined. Using measResult.MasslistComposition classical dimensions? y/n")
-	      
-	      if readline == "y"
-	        a = 1
-	      else 
-	        a = 2
-	      end
+	  if classicalDimensions
+	  	a = 1
+	  else
+		  if !(length(elements) in size(compositions))
+			  println("direction of composition matrix and elements are incompatible.")
+		  elseif findfirst(size(elements) .== size(compositions)) .!= findlast(size(elements) .== size(compositions))
+			  println("direction of composition matrix and elements could not be clearly determined. Using measResult.MasslistComposition classical dimensions? y/n")
+			  #readline = readline()
+			  if readline() == "y"
+			    a = 1
+			  else 
+			    a = 2
+			  end
+		  end
 	  end
 	  if (findfirst(size(elements) .== size(compositions)) .== findlast(size(elements) .== size(compositions)) == 1) | (a==1)    
 	      ret = Array{String,1}()
 	      for i=1:size(compositions,2)
 	        if showMass
-	          push!(ret,"$(round(massFromCompositionArray(compositions[:,i];elements=elements),digits=2)) - $(sumFormulaStringFromCompositionArray(compositions[:,i];elements=elements, ion = ion))")
+	          push!(ret,"$(round(massFromCompositionArray(compositions[:,i];elements=elements),digits=2)) - $(sumFormulaStringFromCompositionArray(compositions[:,i];elements=elements, ion = ion,correctForIon=correctForIon))")
 	        else
-	          push!(ret,sumFormulaStringFromCompositionArray(compositions[:,i];elements=elements, ion = ion))
+	          push!(ret,sumFormulaStringFromCompositionArray(compositions[:,i];elements=elements, ion = ion,correctForIon=correctForIon))
 	        end
 	      end
 	  elseif (findfirst(size(elements) .== size(compositions)) .== findlast(size(elements) .== size(compositions)) == 2) | (a==2)     
 	      ret = Array{String,1}()
 	      for i=1:size(compositions,1)
 	        if showMass
-	          push!(ret,"$(round(massFromCompositionArray(compositions[i,:];elements=elements),digits=2)) - $(sumFormulaStringFromCompositionArray(compositions[i,:];elements=elements, ion = ion))")
+	          push!(ret,"$(round(massFromCompositionArray(compositions[i,:];elements=elements),digits=2)) - $(sumFormulaStringFromCompositionArray(compositions[i,:];elements=elements, ion = ion,correctForIon=correctForIon))")
 	        else
-	          push!(ret,sumFormulaStringFromCompositionArray(compositions[i,:];elements=elements, ion = ion))
+	          push!(ret,sumFormulaStringFromCompositionArray(compositions[i,:];elements=elements, ion = ion,correctForIon=correctForIon))
 	        end
 	      end
 	  end
@@ -666,7 +672,7 @@ module MasslistFunctions
     function compositionFromNamesArray(sarr;possibleElements=masslistElements, ions=["H+"])
         compositions = zeros(length(sarr),length(possibleElements))
         for (n,sn) in enumerate(sarr)
-            println(sn)
+            # println(sn)
             compositions[n,:] = compositionFromName(sn;possibleElements=possibleElements, ions=ions)
         end
         return transpose(Int64.(compositions))

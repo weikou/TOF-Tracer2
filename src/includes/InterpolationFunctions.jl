@@ -302,6 +302,28 @@ module InterpolationFunctions
 	function nanmean(x::Matrix;dims=1)
 		return mapslices(nanmean,x;dims = dims)
 	end
+	
+	"""
+        nanmedian(x::AbstractArray)
+
+    returns the median over the given array, thereby ignoring nans(!)
+    """
+	function nanmedian(x::Vector)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.median(filter(!isnan,x))
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+	
+    """
+        nanmedian(x::AbstractArray)
+
+    returns the median over the given matrix dimension, thereby ignoring nans, except the whole subarray is nans
+    """
+	function nanmedian(x::Matrix;dims=1)
+		return mapslices(nanmedian,x;dims = dims)
+	end
 
     """
         nanstd(x::Matrix;dims=1)
@@ -330,9 +352,9 @@ module InterpolationFunctions
     returns the sum over the given array, thereby ignoring nans, except the whole array is nans
     """
 	function nansum(x::Vector)
-		if length(filter(!isnan, x)) > 0
-			return Statistics.sum(filter(!isnan, x))
-		elseif length(filter(!isnan, x)) == 0
+		if sum(isfinite.(x)) > 0
+			return Statistics.sum(x[isfinite.(x)])
+		elseif sum(isfinite.(x)) == 0
 			return NaN
 		end
 	end

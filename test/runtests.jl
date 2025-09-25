@@ -8,7 +8,6 @@ using Suppressor
 #DocMeta.setdocmeta!(TOFTracer2, :DocTestSetup, :(using TOFTracer2); recursive=true)
 
 @testset "allTests" begin
-	#=
 	include("./test_processingWorkflowAPi.jl")
 	include("./test_processingWorkflow.jl")
 	include("./test_includes/test_TOFFunctions.jl")
@@ -18,7 +17,6 @@ using Suppressor
 	include("./test_includes/test_MasslistFunctions.jl")
 	include("./test_includes/test_ExportFunctions.jl")
 	include("./test_includes/test_ImportFunctions.jl")
-	=#
 	include("./test_includes/test_PlotFunctions.jl")
 end
 
