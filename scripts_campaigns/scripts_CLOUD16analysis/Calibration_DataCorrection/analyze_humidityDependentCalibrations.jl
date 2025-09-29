@@ -6,6 +6,7 @@ using PyPlot
 using Dates
 using CSV
 using DataFrames
+using Statistics
 import LsqFit
 using TOFTracer2
 import TOFTracer2.InterpolationFunctions as IntpF
@@ -13,13 +14,18 @@ import TOFTracer2.CalibrationFunctions as CalF
 import TOFTracer2.ExportFunctions as ExpF
 import TOFTracer2.ImportFunctions as ImpF
 
-fp = "/media/wiebke/Extreme SSD/CLOUD16/PTR3/humdepcalib_2023-09-23/results/"
-humfile = "/media/wiebke/Extreme SSD/CLOUD16/LicorData/calib_humdep_2023-09-22.txt"
+fp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/humdepcalib_2023-09-23/results/"
+humfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/LicorData/calib_humdep_2023-09-22.txt"
 
-fp = "/media/wiebke/Extreme SSD/CLOUD16/PTR3/humdepcalib_2023-11-18_STD1_STD2/results/"
-humfile = "/media/wiebke/Extreme SSD/CLOUD16/LicorData/calib_humdep_2023-11-18.txt"
+fp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/humdepcalib_2023-11-18_STD1_STD2/results/"
+humfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/LicorData/calib_humdep_2023-11-18.txt"
 
 file = "$(fp)_result_calib.hdf5"
+
+# CLOUD15 (humidity-dependence 
+fp = "/media/wiebke/My Passport/CLOUD15/calibs/humidity_step_calib/results/"
+humfile = "$(fp)LICOR_03-11-2022_humsteps.txt"
+file = "$(fp)_result.hdf5"
 
 
 plotStart = DateTime(2000, 1, 1, 0, 0, 0)
@@ -27,7 +33,8 @@ plotEnd = DateTime(3000, 1, 1, 0, 0, 0)
 
 ions2plot = "NH4+" # "NH4+" # "all", "NH4+", "H+"
 #STD_masses_dict = massLibrary.CLOUD_greenSTD_masses # STD1
-STD_masses_dict = massLibrary.CLOUD_brownSTD_masses # STD2
+#STD_masses_dict = massLibrary.CLOUD_brownSTD_masses # STD2
+STD_masses_dict = massLibrary.CLOUD_STD2_masses
 
 ####################################
 # select masses and ions to analyze
@@ -74,7 +81,7 @@ tracesFig, tracesAx, measResult = PlotFunctions.plotTracesFromHDF5(file, massesT
 )
 savefig("$(fp)Traces_$(ions2plot).png")
 
-humDat = PlotFunctions.load_plotLicorData(humfile; ax=tracesAx)
+humDat = PlotFunctions.load_plotLicorData(humfile; ax=tracesAx, header = 2)
 tracesFig.tight_layout()
 
 if !isdefined(Main, :bgTimes)
@@ -109,7 +116,7 @@ ylabel("sensitivity [dcps ppt⁻¹]")
 # plot and export fit parameters
 ################################
 
-hum4plot = collect(0:0.2:12)
+hum4plot = collect(0:0.2:maximum(humidityLimits))
 fitParams = []
 fitParamErrors = []
 colornames = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple", "tab:brown", "tab:pink", "tab:gray", "tab:olive", "tab:cyan", "tab:blue", "tab:orange", "tab:green", "tab:red"]

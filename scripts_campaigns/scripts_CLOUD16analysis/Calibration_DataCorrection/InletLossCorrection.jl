@@ -50,17 +50,14 @@ mResult.Traces[filter3,:] .= mResult.Traces[filter3,:] ./ transpose(transmission
 # run for per filter & transmission
 
 HeaderForExportDict = Dict(
-        "title"=>"oxidized hydrocarbons from Nonanal runs at -15°C",
+        "title"=>"Nonanal Trace",
         "level"=>2,
-        "version"=>"01",
+        "version"=>"02",
         "authorname_mail"=>"Scholz, Wiebke wiebke.scholz@uibk.ac.at",
         "units"=>"ppt",
-        "addcomment"=>"The data have been humidity-depently calibrated with Hexanone as reference (Onr=[1,2]),
-        compounds with Onr>2 are calibrated with kinetic limit.
-        All traces have been corrected to the duty-cycle-corrected primary ion trace.
-        Uncertainty roughly factor 3. Transmission-corrected for a total flow of 4 slpm.\n",
+        "addcomment"=>"The data are from PTR3, first humidity-dependently calibrated with Acetone \n and additionally cross-calibrated with STOF at high concentrations.\n",
         "threshold"=>0,
-        "nrrows_addcomment" => 5
+        "nrrows_addcomment" => 2
         )
 
 HeaderForExport = TOFTracer2.ExportFunctions.CLOUDheader(mResult.Times[filter1];

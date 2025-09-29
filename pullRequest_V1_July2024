@@ -1,0 +1,18 @@
+
+
+**Added:** 
+- a lot of Docstrings (with Examples for more complex functions)
+- regularly used Export- and ImportFunctions
+- dictionaries for gasstandards and primary ions massLibrary
+- more advanced Functions for Interpolation and Data Averaging
+- Interactive PlotFunctions
+- more flexibility in MasslistFunctions to allow the usage of TOFTracer2 with different elementLists
+- many Tests for functions at the core of the TOFTracer2, which are untouched by the processingProject test
+
+**current stats:** 
+Test Summary:         | Pass  Total     Time
+allTests              |  283    283  6m48.9s
+     Testing TOFTracer2 tests passed 
+
+                                              Lines    Hit   Miss    %
+TOTAL Coverage                              │  3403 │ 2389 │ 1014 │ 70% │
