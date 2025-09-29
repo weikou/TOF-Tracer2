@@ -8,8 +8,8 @@ module CalibrationFunctions
 	using DataFrames
     using CSV
     using Dates
-    using SpecialFunctions
-    using Trapz
+    import SpecialFunctions as specf
+    import Trapz
     using Statistics
 
 	export generateCalibFactorTrace, generateBgTraces, interpolateBgTraces, humcal_getHumidityDependentSensitivity, humCal_getDatalimitsFromPlot
@@ -760,7 +760,7 @@ Homogeneity of concentration distribution at the entrance and the laminar flow f
 Calculation is based on Fu et al., 2019 (doi: 10.1080/02786826.2019.1608354)
 """
 function pene_core_laminar(amu; temp = 273.15, L_eff = 1.0, Q_tot = 8, Qs=1)
-    M_k(a,b,z,k) = gamma(a+k)/gamma(a) * gamma(b)/gamma(b+k) * z^k/factorial(k) # confluent hypergeometric function of the first kind
+    M_k(a,b,z,k) = specf.gamma(a+k)/specf.gamma(a) * specf.gamma(b)/specf.gamma(b+k) * z^k/factorial(k) # confluent hypergeometric function of the first kind
 	ratio_Qt_Qs = (Q_tot-Qs)/Qs
 	D_amu_temp = (0.31977194 ./(amu .^(1/3.))) .* (temp ./278.15) .^(1.75)  # cm² s⁻¹
 	miu=pi .* D_amu_temp .*(L_eff .*1e2)/(Q_tot .*1e3/60.0)
@@ -799,7 +799,7 @@ function pene_core_laminar(amu; temp = 273.15, L_eff = 1.0, Q_tot = 8, Qs=1)
 	else
 		idx = r_tuple .< ri; #upper bound of the integration r_a, in Eq. 6
 		u = 2 .*(1 .- r_tuple .^2); #velocity profile of laminar flow, assuming that u_avg=1% average penetration at mu at the entrance of core sampling tube
-		pene = trapz(r_tuple[idx],2*pi .*n[idx].*u[idx].*r_tuple[idx]) /trapz(r_tuple[idx],2*pi .*r_tuple[idx].*u[idx]) ;
+		pene = Trapz.trapz(r_tuple[idx],2*pi .*n[idx].*u[idx].*r_tuple[idx]) /Trapz.trapz(r_tuple[idx],2*pi .*r_tuple[idx].*u[idx]) ;
 	end
 	return pene
 end

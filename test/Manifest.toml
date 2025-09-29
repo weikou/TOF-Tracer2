@@ -2,7 +2,7 @@
 
 julia_version = "1.11.7"
 manifest_format = "2.0"
-project_hash = "61126ff5f1039f5eed9439dad8acc4a208755840"
+project_hash = "8ac1aa5ceb6e604f2d081eaba68b70bc3f1b29e8"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "27cecae79e5cc9935255f90c53bb831cc3c870d7"
@@ -930,6 +930,18 @@ uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
 uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
 version = "7.7.0+0"
+
+[[deps.Suppressor]]
+deps = ["Logging"]
+git-tree-sha1 = "6dbb5b635c5437c68c28c2ac9e39b87138f37c0a"
+uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+version = "0.2.8"
+
+[[deps.TOFTracer2]]
+deps = ["CSV", "ColorSchemes", "DSP", "DataFrames", "Dates", "DelimitedFiles", "Distributed", "HDF5", "LaTeXStrings", "LsqFit", "PyCall", "PyPlot", "SharedArrays", "SparseArrays", "SpecialFunctions", "Statistics", "Trapz"]
+path = ".."
+uuid = "767abeae-b283-44e3-97fa-db60ef46027d"
+version = "0.1.0"
 
 [[deps.TOML]]
 deps = ["Dates"]
