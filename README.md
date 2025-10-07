@@ -37,8 +37,13 @@ activate the package with
 
 	] activate .
 
-then 
-run tests in package mode ```(TOFTracer2) pkg>``` with 
+then (also in Pkg mode) run
+
+	instantiate
+	
+to download the package dependencies.
+
+finally, you can run tests in package mode ```(TOFTracer2) pkg>``` with 
 
 	test [--coverage]
 	
