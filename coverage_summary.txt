@@ -1,0 +1,49 @@
+in package mode, run: 
+	test --coverage
+
+using LocalCoverage 
+generate_coverage(run_test = false) # defaults shown
+
+
+# ALL TESTS NOW
+
+Test Summary: | Pass  Total     Time
+allTests      |  279    279  4m04.3s
+     Testing TOFTracer2 tests passed 
+
+     
+┌─────────────────────────────────────────────────────────────┬───────┬──────┬──────┬─────┐
+│ Filename                                                    │ Lines │  Hit │ Miss │   % │
+├─────────────────────────────────────────────────────────────┼───────┼──────┼──────┼─────┤
+│ src/TOFTracer2.jl                                           │     0 │    0 │    0 │   - │
+│ src/includes/APiTofFunctions.jl                             │   330 │  171 │  159 │ 52% │
+│ src/includes/BaselineFunctions.jl                           │    22 │   20 │    2 │ 91% │
+│ src/includes/CalibrationFunctions.jl                        │   513 │  349 │  164 │ 68% │
+│ src/includes/DatasetPreloader.jl                            │    23 │   13 │   10 │ 57% │
+│ src/includes/ExportFunctions.jl                             │    68 │   65 │    3 │ 96% │
+│ src/includes/ImportFunctions.jl                             │    35 │   31 │    4 │ 89% │
+│ src/includes/InterpolationFunctions.jl                      │   258 │  235 │   23 │ 91% │
+│ src/includes/MasslistFunctions.jl                           │   269 │  237 │   32 │ 88% │
+│ src/includes/MultipeakFunctions.jl                          │    48 │   40 │    8 │ 83% │
+│ src/includes/MultipeakFunctionsAPi.jl                       │    48 │   40 │    8 │ 83% │
+│ src/includes/PeakshapeFunctions.jl                          │    64 │   63 │    1 │ 98% │
+│ src/includes/PlotFunctions.jl                               │   530 │  188 │  342 │ 35% │
+│ src/includes/ResultFileFunctions.jl                         │   293 │  242 │   51 │ 83% │
+│ src/includes/TofFunctions.jl                                │   240 │  196 │   44 │ 82% │
+│ src/includes/manualMassLibrary.jl                           │     0 │    0 │    0 │   - │
+│ src/massAxisCalibAPi.jl                                     │     3 │    0 │    3 │  0% │
+│ src/plotResults.jl                                          │     0 │    0 │    0 │   - │
+│ src/plotResultsInteractive.jl                               │     0 │    0 │    0 │   - │
+│ src/processingProjects/processingProject-example.jl         │     0 │    0 │    0 │   - │
+│ src/processingProjects/processingProject-example_APi-TOF.jl │     0 │    0 │    0 │   - │
+│ src/workflows/combinedMassScaleAndExtractSumSpec.jl         │   240 │  209 │   31 │ 87% │
+│ src/workflows/combinedMassScaleAndExtractSumSpecAPi.jl      │   270 │  161 │  109 │ 60% │
+│ src/workflows/deconvolutionMatrix.jl                        │   103 │   97 │    6 │ 94% │
+│ src/workflows/peakShape.jl                                  │    37 │   33 │    4 │ 89% │
+├─────────────────────────────────────────────────────────────┼───────┼──────┼──────┼─────┤
+│ TOTAL                                                       │  3394 │ 2390 │ 1004 │ 70% │
+└─────────────────────────────────────────────────────────────┴───────┴──────┴──────┴─────┘
+
+
+
+

@@ -21,43 +21,42 @@ import TOFTracer2.ImportFunctions as ImpF
 ##############################################
 
 # should cover the full period to calibrate (or as much as possible):
-frostpointfile = "/media/wiebke/Extreme SSD/CLOUD16/Surfactants_dataFromOthers/frostpoint.csv"
+frostpointfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/Surfactants_dataFromOthers/frostpoint.csv"
 frostpointDatetimeFormat = "dd-mm-yy HH:MM:SS"
 frostpointLabel = "fp_MBW" # should be the label as from the file!
 
-licorFilepath = "/media/wiebke/Extreme SSD/CLOUD16/LicorData/"
+licorFilepath = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/LicorData/"
 
 # this file contains the parameters from the previous analysis of humidity-dependent calibration:
-humcalibfp = "/media/wiebke/Extreme SSD/CLOUD16/PTR3/humdepcalib_2023-11-18_STD1_STD2/results/STD2/fitParameters_relative.txt"
+humcalibfp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/humdepcalib_2023-11-18_STD1_STD2/results/STD2/fitParameters_relative.txt"
 
 # this ican be either the processed file of the dry calibrations or the CSV file containing the exported hexanone vs primary ion parameters for loading them:
-drycalibsfile = "/media/wiebke/Extreme SSD/CLOUD16/PTR3/calibs/results/resultsHexanone_VS_PIs_params.csv"
+drycalibsfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/calibs/results/resultsHexanone_VS_PIs_params.csv"
 
 # enter here the file that should be calibrated at once (require to be processed with the same masslist!!!):
-resultfp = "/media/wiebke/Extreme SSD/CLOUD16/PTR3/Surfactants/data/"
+resultfp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/Surfactants/data/rawData/"
 resultfiles = ["$(resultfp)part1/results/_result.hdf5","$(resultfp)part2/results/_result.hdf5"]
 
 ionization = "NH4+" # "NH4+", "H+"...
 primaryionslist = [] # leave empty -> default: adding all possible water and ammonium clusters
 
-refMass = massLibrary.HEXANONE_nh4[1]
-refName = TOFTracer2.MasslistFunctions.sumFormulaStringFromCompositionArray(massLibrary.HEXANONE_nh4[4]; ion = "")
+refMass = massLibrary.ACETONE_nh4[1] # HEXANONE_nh4[1] ; ACETONE_nh4[1] ; MVK_nh4[1]
+refName = TOFTracer2.MasslistFunctions.sumFormulaStringFromCompositionArray(massLibrary.ACETONE_nh4[4]; ion = "")
 
-exportTraces = false # if true, check HeaderForExportDict below:
+exportTraces = true # if true, check HeaderForExportDict below:
 HeaderForExportDict = Dict(
-        "title"=>"oxidized hydrocarbons from Nonanal runs at -15°C",
+        "title"=>"oVOCs from Runs...",
         "level"=>2,
         "version"=>"01",
         "authorname_mail"=>"Scholz, Wiebke wiebke.scholz@uibk.ac.at",
         "units"=>"ppt",
-        "addcomment"=>"The data have been humidity-depently calibrated with Hexanone as reference (Onr=[1,2]),
+        "addcomment"=>"The data have been humidity-depently calibrated with Acetone as reference (Onr=[1,2]),
         compounds with Onr>2 are calibrated with kinetic limit.
         All traces have been corrected to the duty-cycle-corrected primary ion trace.
-        Uncertainty roughly factor 3. Not transmission-corrected yet.",
+        Uncertainty roughly factor 3. Not transmission-corrected yet.\n",
         "threshold"=>0,
         "nrrows_addcomment" => 4
         )
-##
 
 #####################################################
 # load and prepare metadata of the final calibration
@@ -135,6 +134,8 @@ mResfinal_PIs = ResultFileFunctions.loadResults(resultfiles[1]; useAveragesOnly=
 mResfinal = ResultFileFunctions.loadResults(resultfiles[1]; useAveragesOnly=true)
 if length(resultfiles) > 1
     for i in 2:length(resultfiles)
+        global mResfinal_PIs
+        global mResfinal
         mres_pi_i = ResultFileFunctions.loadResults(resultfiles[i]; useAveragesOnly=true, massesToLoad=primaryionslist)
         mResfinal_PIs = ResultFileFunctions.joinResultsTime(mResfinal_PIs, mres_pi_i)
         mres_i = ResultFileFunctions.loadResults(resultfiles[i]; useAveragesOnly=true)
