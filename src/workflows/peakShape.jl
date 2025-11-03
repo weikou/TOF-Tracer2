@@ -1,5 +1,5 @@
 
-import PyPlot
+import PythonPlot
 import HDF5
 #import .InterpolationFunctions
 #import .BaselineFunctions
@@ -30,12 +30,12 @@ function baselineAndPeakshape(
   peakIndices = PeakshapeFunctions.findPeakIndices(massAxis, avgSpectrum, baselineInterpolated, baselineNoiseInterpolated, noiseThreshold = peakfindingNoiseThresholdValue, signalLimit = peakfindingSignalLimit)
   peakShapesCenterMass, peakShapesY = PeakshapeFunctions.calculatePeakshapes(massAxis, baselineCorrectedAvgSpec, peakIndices, nbrMassRegions = peakshapeRegions,regionStretch=peakshapeRegionStretch, peakWindowWidth = peakWindowWidth, quantileValue = peakshapeQuantileValue)
 
-  PyPlot.figure()
-  PyPlot.title("Baseline Correction")
-  PyPlot.semilogy(baselinePoints,baselineValues,".-")
-  PyPlot.semilogy(baselinePoints,baselineValues + baselineNoise,".")
+  PythonPlot.figure()
+  PythonPlot.title("Baseline Correction")
+  PythonPlot.semilogy(baselinePoints,baselineValues,".-")
+  PythonPlot.semilogy(baselinePoints,baselineValues + baselineNoise,".")
   #semilogy(peakMasses, peakValues, "x")
-  PyPlot.semilogy(massAxis,avgSpectrum)
+  PythonPlot.semilogy(massAxis,avgSpectrum)
 
 
   ############ delete h5 data that will be overwritten ###########

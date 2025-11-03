@@ -2,9 +2,9 @@
 using Distributed
 import HDF5
 import Statistics
-#using PyCall
+#using PythonCall
 #pygui(:tk) # :tk, :gtk3, :gtk, :qt5, :qt4, :qt, or :wx
-import PyPlot
+import PythonPlot
 
 function correctMassScaleAndExtractSumSpec(
   filepath,
@@ -129,7 +129,7 @@ function correctMassScaleAndExtractSumSpec(
 
 
   if (plotControlMass == true)
-    PyPlot.figure()
+    PythonPlot.figure()
   end
 
   if (createTotalAvg == true)

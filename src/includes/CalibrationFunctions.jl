@@ -4,7 +4,7 @@ module CalibrationFunctions
 	import ..PlotFunctions
 	import ..MasslistFunctions
 	using LsqFit
-	using PyPlot
+	using PythonPlot
 	using DataFrames
     using CSV
     using Dates
@@ -167,9 +167,9 @@ module CalibrationFunctions
         sorter = sortperm(allTimes)
         allTimesSorted = allTimes[sorter]
         allValuesSorted = allValues[sorter,:]
-	    PyPlot.figure()
-	    PyPlot.plot(Dates.unix2datetime.(allTimesSorted), allValuesSorted, "x-")
-	    PyPlot.plot(Dates.unix2datetime.(traceTimes),IntpF.interpolate(Dates.unix2datetime.(traceTimes), Dates.unix2datetime.(allTimesSorted), allValuesSorted),"--")
+	    PythonPlot.figure()
+	    PythonPlot.plot(Dates.unix2datetime.(allTimesSorted), allValuesSorted, "x-")
+	    PythonPlot.plot(Dates.unix2datetime.(traceTimes),IntpF.interpolate(Dates.unix2datetime.(traceTimes), Dates.unix2datetime.(allTimesSorted), allValuesSorted),"--")
 	  return IntpF.interpolate(Dates.unix2datetime.(traceTimes), Dates.unix2datetime.(allTimesSorted), allValuesSorted)
     end
 

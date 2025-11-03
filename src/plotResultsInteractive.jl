@@ -1,8 +1,8 @@
 using TOFTracer2
 
-#using PyCall
+#using PythonCall
 #pygui(:tk) # :tk, :gtk3, :gtk, :qt5, :qt4, :qt, or :wx
-import PyPlot
+import PythonPlot
 import .InterpolationFunctions
 import  .MasslistFunctions
 import .ResultFileFunctions

@@ -7,7 +7,7 @@ module TOFFunctions
 	using Dates
 	import ..DatasetPreloader
 	import ..InterpolationFunctions
-	import PyPlot
+	import PythonPlot
 
 	SPEC_CACHE_SIZE_LIMIT = 5e8
 
@@ -392,7 +392,7 @@ module TOFFunctions
 	  if (m_plotControlMass == true)
 	    indexesExact = TOFFunctions.mass2timebin(crOriginalMasses, m_referenceMassScaleMode, newParams)
 	    crNewInterpolatedValues = InterpolationFunctions.interpolate(indexesExact,spectrum)
-	    PyPlot.plot(crOriginalMasses, crNewInterpolatedValues/maximum(crNewInterpolatedValues),".-")
+	    PythonPlot.plot(crOriginalMasses, crNewInterpolatedValues/maximum(crNewInterpolatedValues),".-")
 	  end
 	return newParams, success, timebinshifts, intensities
 	end

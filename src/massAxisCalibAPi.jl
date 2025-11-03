@@ -1,7 +1,7 @@
 ### libs
-using PyCall
+using PythonCall
 using HDF5
-using PyPlot, Colors
+using PythonPlot, Colors
 using Statistics
 ###
 # path

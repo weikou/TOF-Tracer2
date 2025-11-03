@@ -8,7 +8,7 @@ module APiTOFFunctions
 	using Statistics
 	import ..DatasetPreloader
 	import ..InterpolationFunctions
-	import PyPlot
+	import PythonPlot
 	import LsqFit
 
 	SPEC_CACHE_SIZE_LIMIT = 5e8
@@ -525,7 +525,7 @@ module APiTOFFunctions
 		m_MassScaleMode = m_referenceMassScaleMode # 0 # instead of using m_referenceMassScaleMode
 	    indexesExact = APiTOFFunctions.mass2timebin(crOriginalMasses, m_MassScaleMode, newParams) # (crOriginalMasses, m_referenceMassScaleMode, newParams)
 	    crNewInterpolatedValues = InterpolationFunctions.interpolate(indexesExact,spectrum)
-	    PyPlot.plot(crOriginalMasses, crNewInterpolatedValues/maximum(crNewInterpolatedValues),".-")
+	    PythonPlot.plot(crOriginalMasses, crNewInterpolatedValues/maximum(crNewInterpolatedValues),".-")
 	  end
 	return newParams, success, timebinshifts, intensities
 	end

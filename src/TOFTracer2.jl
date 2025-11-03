@@ -3,7 +3,7 @@ module TOFTracer2
 using Distributed
 using Dates
 using DelimitedFiles
-using PyPlot
+using PythonPlot
 
 export correctMassScaleAndExtractSumSpec, correctMassScaleAndExtractSumSpecAPi, baselineAndPeakshape, deconvolute, ResultFileFunctions, MasslistFunctions, PlotFunctions, InterpolationFunctions, massLibrary
 

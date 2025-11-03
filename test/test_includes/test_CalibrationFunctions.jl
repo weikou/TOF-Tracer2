@@ -1,6 +1,5 @@
 @testset "CalibrationFunctions" begin
 
-    using PyPlot
     using Dates
     using Statistics
     

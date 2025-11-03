@@ -1,6 +1,6 @@
 "The module PeakshapeFunctions is a module needed for the processing workflow and collects all functions that are related to determining the mass-dependent peakshape from the raw data."
 module PeakshapeFunctions
-	import PyPlot
+	import PythonPlot
 	import SharedArrays
 	import ..InterpolationFunctions
 	import Statistics
@@ -41,9 +41,9 @@ module PeakshapeFunctions
 	    peakShapesY = Array{Float64}(undef,2*peakWindowWidth+1, nbrMassRegions)
 	    peakShapesCenterMass = Array{Float64}(undef,nbrMassRegions)
 
-	    PyPlot.figure()
+	    PythonPlot.figure()
 	    for massRegion = 1:nbrMassRegions
-	      ax=PyPlot.subplot(Int(ceil(nbrMassRegions/4)),4,massRegion) #change Int() Leander
+	      ax=PythonPlot.subplot(Int(ceil(nbrMassRegions/4)),4,massRegion) #change Int() Leander
 
 	      #peakshapeRangeStart = (massRegion-1) *peakMasses[end] / nbrMassRegions
 	      #peakshapeRangeEnd = (massRegion) *peakMasses[end] / nbrMassRegions
@@ -93,12 +93,12 @@ module PeakshapeFunctions
 	      peakshapeY[peakWindowWidth+1] = 1
 	      peakShapesY[:,massRegion] = peakshapeY / sum(peakshapeY)
 	      if (size(peakWood,2) > 0)
-		  PyPlot.semilogy(peakWood)
+		  PythonPlot.semilogy(peakWood)
 	      end
-	      PyPlot.semilogy(peakshapeY, "o-", label="$peakshapeRangeStart - $peakshapeRangeEnd")
+	      PythonPlot.semilogy(peakshapeY, "o-", label="$peakshapeRangeStart - $peakshapeRangeEnd")
 	      ax.set_title("$(round(peakshapeRangeStart,digits=1)) - $(round(peakshapeRangeEnd,digits=1))")
 	    end
-	    PyPlot.suptitle("Mass dependent Peakshapes")
+	    PythonPlot.suptitle("Mass dependent Peakshapes")
 	    return peakShapesCenterMass, peakShapesY
 	  end
 

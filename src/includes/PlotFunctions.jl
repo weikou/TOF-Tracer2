@@ -3,8 +3,8 @@ module PlotFunctions
 	import  ..MasslistFunctions
 	import ..ResultFileFunctions
 	import ..InterpolationFunctions
-	using PyPlot
-    using PyCall    
+	using PythonPlot
+    using PythonCall    
 	using HDF5
 	using Dates
 	using CSV
@@ -73,9 +73,9 @@ module PlotFunctions
 	      # I.e. doubling the underlying quantity should double the area of the marker.
 	      # dotsize might need adjustment!
 	      if norm == 0
-	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], vmin=colvmin,vmax=colvmax, marker=marker)
+	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PythonPlot.cm[colormap], vmin=colvmin,vmax=colvmax, marker=marker)
 	      else
-	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], norm=norm, marker=marker)
+	          s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*concentrations[f], colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PythonPlot.cm[colormap], norm=norm, marker=marker)
 	      end
 	      maxsize = round(Statistics.maximum(concentrations[f]);sigdigits=2)
 	      minsize = round(minConc;sigdigits=1)
@@ -86,9 +86,9 @@ module PlotFunctions
 	  else
 	      # scaling area with sqrt(conc) makes sense, when the sizes scale over many orders of magnitude
 	      if norm == 0
-	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap], vmin=colvmin,vmax=colvmax, marker=marker)  
+	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PythonPlot.cm[colormap], vmin=colvmin,vmax=colvmax, marker=marker)  
 	      else
-	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PyPlot.cm[colormap],norm=norm, marker=marker)   
+	           s = scatter(masses[f], masses[f]-round.(masses[f]),dotSize.*sqrt.(concentrations[f]), colors[f], zorder=10, linewidths=0.5, alpha = 0.7, edgecolors="dimgrey",cmap=PythonPlot.cm[colormap],norm=norm, marker=marker)   
 	      end
 	      maxsize = round(sqrt.(Statistics.maximum(concentrations[f]));sigdigits=1)
 	      minsize = round(sqrt.(minConc);sigdigits=1)
@@ -178,7 +178,7 @@ module PlotFunctions
         colorCodeTitle=" ",
         legendLoc=4,
         scalePoints="linear", # other options: "squareRoot", "log2", "log10"
-        cmap=PyPlot.cm["viridis"],
+        cmap=PythonPlot.cm["viridis"],
         norm=0,
         colorbarextend=both, # other options: "neither", "both", "min", "max"
 
@@ -189,7 +189,7 @@ module PlotFunctions
     function MDplot_stages(masses, concs, color, savefn;legendLoc=4,alpha=0.3,
         stagenrs=[],stageBG=2600.02,stageSignal=2600.01,scalingfactor=1,scalePoints="linear",
         colorCodeTitle=" ",colorbarticks=[],colorbarticklabels=[],colorbarextend="neither",
-        cmap=PyPlot.cm["viridis"],norm=0,colvmin=0,colvmax=1,newfigure=true)
+        cmap=PythonPlot.cm["viridis"],norm=0,colvmin=0,colvmax=1,newfigure=true)
         
         stagenrIdxBG = findfirst(x -> x == stageBG,stagenrs)
         stagenrIdxSignal = findfirst(x -> x == stageSignal,stagenrs)
@@ -609,9 +609,9 @@ module PlotFunctions
 	"""
 	function plotStages_simple(datetimes, stageNames; axes = [], starttime=DateTime(0),  endtime=DateTime(0), textoffset = 0.75, vlinecolor = "k",fontsize=8)		
 		if ((starttime==DateTime(0)) & (endtime==DateTime(0)))
-			if (typeof(axes) == PyCall.PyObject)
+			if (typeof(axes) == PythonCall.Py)
 				(starttime,endtime) = PlotFunctions.matplotlib2datetime.(axes.get_xlim())
-			elseif (typeof(axes) == Vector{PyObject})
+			elseif (typeof(axes) == Vector{PythonCall.Py})
 				println("using the datetime limits of the first given axis in the array.")
 				(starttime,endtime) = PlotFunctions.matplotlib2datetime.((axes[1]).get_xlim())
 			end
@@ -621,7 +621,7 @@ module PlotFunctions
 			show = trues(length(datetimes))
 		end
 		end
-		if typeof(axes) == Vector{PyObject}
+		if typeof(axes) == Vector{PythonCall.Py}
 			for ax in axes
 				ax.axvline.(datetimes[show], color = vlinecolor)
 			end
@@ -746,7 +746,7 @@ module PlotFunctions
 	loads and plots the given licor file. 
 	
 	- header gives the line, in which the header is located (typically ==1 or ==2)
-	- if ax (PyCall.PyObject) is given, it will plot the data in that axis, else, if will create a new figure
+	- if ax (PythonCall.Py) is given, it will plot the data in that axis, else, if will create a new figure
 	"""
   	function load_plotLicorData(humfile;ax="None", header=1)
 	  	humdat=DataFrame(CSV.File(humfile, header = header))
@@ -774,7 +774,7 @@ module PlotFunctions
 ############################
 
 	mutable struct InteractivePlot
-	   figure::PyPlot.Figure
+	   figure::PythonPlot.Figure
 	   axes
 	   file::String
 	   activeIndices::Vector{Int32}
@@ -786,7 +786,7 @@ module PlotFunctions
 	   availableTraces::ResultFileFunctions.MeasurementResult
 	end
 
-    function InteractivePlot(file::String,ax::PyCall.PyObject)
+    function InteractivePlot(file::String,ax::PythonCall.Py)
 	   	figure = ax.figure
 	   	axes = ax
 	   	file = file
@@ -817,8 +817,8 @@ module PlotFunctions
 	end
 
 	function InteractivePlot(file::String)
-		figure = PyPlot.figure()
-		ax = PyPlot.subplot(1,1,1)
+		figure = PythonPlot.figure()
+		ax = PythonPlot.subplot(1,1,1)
 		lastPlottedIndex = 1
 		activeIndices = Int32[]
 		coords = []
@@ -838,8 +838,8 @@ module PlotFunctions
 
     function InteractivePlot(result::ResultFileFunctions.MeasurementResult)
         file = " "
-		figure = PyPlot.figure()
-		ax = PyPlot.subplot(1,1,1)
+		figure = PythonPlot.figure()
+		ax = PythonPlot.subplot(1,1,1)
 		lastPlottedIndex = 1
 		activeIndices = Int32[]
 		coords = []

@@ -1,5 +1,5 @@
 import HDF5
-import PyPlot
+import PythonPlot
 import SparseArrays
 
 
@@ -32,8 +32,8 @@ function deconvolute(
     println("Multiple entries of the same mass --> will produce singular matrix!!!")
   end
 
-  PyPlot.figure()
-  ax = PyPlot.subplot(111)
+  PythonPlot.figure()
+  ax = PythonPlot.subplot(111)
 
     selector = (massesOrig .> 0)
     masses = massesOrig[selector]
@@ -71,13 +71,13 @@ function deconvolute(
 
 
     if APITOF
-    	PyPlot.plot(massAxis,totalAvgSpectrum, "-o", label="Original", color="r")
+      PythonPlot.plot(massAxis,totalAvgSpectrum, "-o", label="Original", color="r")
     	reconstructedSpectrum = MultipeakFunctionsAPi.reconstructSpectrum(
     							massAxis, massScaleMode, massScaleParameters, 
     							masses, compositions, counts, 
     							peakShapesCenterMass, peakShapesY)
     else
-    	PyPlot.semilogy(massAxis,totalAvgSpectrum, "-o", label="Original", color="r")
+      PythonPlot.semilogy(massAxis,totalAvgSpectrum, "-o", label="Original", color="r")
     	reconstructedSpectrum = MultipeakFunctions.reconstructSpectrum(
     							massAxis, massScaleMode, massScaleParameters, 
     							masses, compositions, counts, 
@@ -85,19 +85,19 @@ function deconvolute(
     end
   
 
-  PyPlot.plot(massAxis, reconstructedSpectrum, label="Fit", color="b")
-  PyPlot.plot(massAxis, totalAvgSpectrum-reconstructedSpectrum, label="Residual", color="g")
+  PythonPlot.plot(massAxis, reconstructedSpectrum, label="Fit", color="b")
+  PythonPlot.plot(massAxis, totalAvgSpectrum-reconstructedSpectrum, label="Residual", color="g")
   assyErrorX = [(masses-massBordersLow)'; (massBordersHigh-masses)']
   y = InterpolationFunctions.interpolate(masses, massAxis, totalAvgSpectrum)
   if APITOF
-  	PyPlot.errorbar(APiTOFFunctions.timebin2mass(massCenterIdx, massScaleMode, massScaleParameters),y,xerr=assyErrorX, fmt="o")
+  	PythonPlot.errorbar(APiTOFFunctions.timebin2mass(massCenterIdx, massScaleMode, massScaleParameters),y,xerr=assyErrorX, fmt="o")
   else
-  	PyPlot.errorbar(TOFFunctions.timebin2mass(massCenterIdx, massScaleMode, massScaleParameters),y,xerr=assyErrorX, fmt="o")
+  	PythonPlot.errorbar(TOFFunctions.timebin2mass(massCenterIdx, massScaleMode, massScaleParameters),y,xerr=assyErrorX, fmt="o")
   end
   
-  PyPlot.errorbar(masses,y,xerr=assyErrorX, fmt="x")
+  PythonPlot.errorbar(masses,y,xerr=assyErrorX, fmt="x")
 
-  PyPlot.legend()
+  PythonPlot.legend()
   ax.set_ylim([minimum(totalAvgSpectrum),maximum(totalAvgSpectrum)])
   println(" DONE")
 

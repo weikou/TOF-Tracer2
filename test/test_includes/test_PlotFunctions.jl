@@ -1,7 +1,7 @@
 @testset "PlotFunctions" begin
 
-using PyPlot
-using PyCall
+using PythonPlot
+using PythonCall
 using Dates
 using DataFrames
 
@@ -17,7 +17,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
         volatilitycmap = plotF.volatilityColorMap()
         @test isa(volatilitycmap,Tuple)
         @test isa(volatilitycmap[1],ColorMap)
-        @test isa(volatilitycmap[2],PyCall.PyObject)
+        @test isa(volatilitycmap[2],PythonCall.Py)
     end
 
     @testset "customListedColorMap" begin
@@ -26,7 +26,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
         customlistedcmap = plotF.customListedColorMap(colorlist;boundaries=boundaries,name="custom")
         @test isa(customlistedcmap,Tuple)
         @test isa(customlistedcmap[1],ColorMap)
-        @test isa(customlistedcmap[2],PyCall.PyObject)
+        @test isa(customlistedcmap[2],PythonCall.Py)
     end
     
     @testset "matplotlib2datetime" begin
@@ -90,7 +90,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
 		)
 	    
     @test isa(tracesFig,Figure)
-    @test isa(tracesAx,PyCall.PyObject)
+    @test isa(tracesAx,PythonCall.Py)
     @test isa(mRes,TOFTracer2.ResultFileFunctions.MeasurementResult)
     
     @testset "plotStages" begin
@@ -128,7 +128,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
 			savefigname = ""
 			) 
         @test isa(fig,Figure)
-        @test isa(ax,PyCall.PyObject)
+        @test isa(ax,PythonCall.Py)
         @test isa(measResult,TOFTracer2.ResultFileFunctions.MeasurementResult)
         @test legStrings == [ 
                  "m/z 19.018 - H2O.H+"
@@ -145,15 +145,15 @@ import TOFTracer2.ResultFileFunctions as ResFF
     @testset "scatterPlots" begin
         dryCalibFig, dryCalibAx, mResDryCalibs = plotF.scatterDryCalibs(resfile,referenceMasses=[TOFTracer2.massLibrary.APINENE_nh4[1]])
         @test isa(dryCalibFig,Figure)
-        @test isa(dryCalibAx,PyCall.PyObject)
+        @test isa(dryCalibAx,PythonCall.Py)
         @test isa(mResDryCalibs,TOFTracer2.ResultFileFunctions.MeasurementResult)
         
         xdata = [1,2,3,4,5]
         ydata = [10 100 1000 2000;5 50 500 1000;3 30 300 600;2 20 200 400; 1.5 15 150 300]
         ydataerr = ydata .* 0.1
-        fig2, ax2 = plotF.scatter_errorbar(PyPlot.figure(),mResDryCalibs,xdata,ydata,ydataerr;ion="H+")
+        fig2, ax2 = plotF.scatter_errorbar(PythonPlot.figure(),mResDryCalibs,xdata,ydata,ydataerr;ion="H+")
         @test isa(fig2,Figure)
-        @test isa(ax2,PyCall.PyObject)
+        @test isa(ax2,PythonCall.Py)
     end
     
     @testset "load_plotLicorData" begin
