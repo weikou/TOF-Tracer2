@@ -42,7 +42,7 @@ function baselineAndPeakshape(
   fh = HDF5.h5open(file,"r+")
   for attr in ["AvgBaseline", "MassDepPeakshape", "MassDepPeakshapeCenterMasses", "BaseLines"]
     if haskey(fh, attr)
-      HDF5.delete_attribute(fh,attr)
+      HDF5.delete_object(fh,attr)
     end
   end
   HDF5.close(fh)

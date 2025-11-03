@@ -5,7 +5,7 @@
 using Dates
 using TOFTracer2
 
-file = joinpath(pwd(), "ExampleFiles", "TOFDATA", "results", "_result.hdf5")
+file = joinpath(@__DIR__,"..", "ExampleFiles", "TOFDATA", "results", "_result.hdf5")
 
 backgroundSubstractionMode = 0 # 0=no correction, 1=minimum found in all data,  2=mean of range given below
 backgroundStart = DateTime(2016, 10, 02, 19, 14)

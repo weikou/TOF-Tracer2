@@ -332,7 +332,7 @@ module ResultFileFunctions
 	      return
 	  end
 	  if haskey(fh,"CorrStickCpsT")
-	      HDF5.delete_attribute(fh,"CorrStickCpsT")
+	      HDF5.delete_object(fh,"CorrStickCpsT")
 	  end
 	  dsOld = fh["CorrStickCps"]
 	  nbrSpectra, nbrMasses = size(dsOld)

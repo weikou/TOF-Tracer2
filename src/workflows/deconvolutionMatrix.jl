@@ -110,10 +110,10 @@ function deconvolute(
   fh = HDF5.h5open(file,"r+")
   
   if haskey(fh,"CorrStickCps")
-    HDF5.delete_attribute(fh,"CorrStickCps")
+    HDF5.delete_object(fh,"CorrStickCps")
   end
   if haskey(fh,"CorrStickCpsErrors")
-    HDF5.delete_attribute(fh,"CorrStickCpsErrors")
+    HDF5.delete_object(fh,"CorrStickCpsErrors")
   end
 
   if haskey(fh,"StickCps")
@@ -159,10 +159,10 @@ function deconvolute(
     end
 
     if haskey(fh,"CorrAvgStickCps")
-      HDF5.delete_attribute(fh,"CorrAvgStickCps")
+      HDF5.delete_object(fh,"CorrAvgStickCps")
     end
     if haskey(fh,"CorrAvgStickCpsErrors")
-      HDF5.delete_attribute(fh,"CorrAvgStickCpsErrors")
+      HDF5.delete_object(fh,"CorrAvgStickCpsErrors")
     end
   
     HDF5.h5write(file, "CorrAvgStickCps", traces)
