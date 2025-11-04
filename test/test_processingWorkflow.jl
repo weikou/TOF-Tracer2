@@ -15,52 +15,36 @@
     masslistCompositions = masslistCompositions[s,:]
     
     rm(joinpath(fp,"results"); force=true, recursive=true)
-    #=
+    
     correctMassScaleAndExtractSumSpec(
-	    fp,
-	    masslistMasses,
-	    masslistElements,
-	    masslistElementsMasses,
-	    masslistCompositions,
-	    "",
-	    cr,
-	    filefilterRegexp=r"\.h5$",
-	    onlyUseAverages = false,
-	    plotControlMass = true,
-	    firstNFiles=2,
-	    lastNFiles = 2,
-	    # massBorderCalculation = 2,
-	    filePrecaching = true,
-	    openWholeFile = false,
-	    validateFiles = false,
-	    testRangeStart = 137.0, # the mass shift of this region will be shown if plot control mass is set true. Should not be part of calibRegions
-	    testRangeEnd = 137.5,
-	) 
-	=#
-    correctMassScaleAndExtractSumSpec(
-	    fp,
-	    masslistMasses,
-	    masslistElements,
-	    masslistElementsMasses,
-	    masslistCompositions,
-	    rf,
-	    cr,
-	    filefilterRegexp=r"\.h5$",
-	    onlyUseAverages = false,
-	    plotControlMass = true,
-	    firstNFiles=0,
-	    lastNFiles = 0,
-	    filePrecaching = false,
-	    openWholeFile = true,
-	    testRangeStart = 137.0, # the mass shift of this region will be shown if plot control mass is set true. Should not be part of calibRegions
-	    testRangeEnd = 137.5,
+	fp,
+    masslistMasses,
+    masslistElements,
+    masslistElementsMasses,
+    masslistCompositions,
+    rf,
+    cr,
+    filefilterRegexp=r"\.h5$",
+    onlyUseAverages = false,
+    plotControlMass = true,
+    firstNFiles=0,
+    lastNFiles = 0,
+    filePrecaching = false,
+    openWholeFile = true,
+    testRangeStart = 137.0, # the mass shift of this region will be shown if plot control mass is set true. Should not be part of calibRegions
+    testRangeEnd = 137.5,
+    recalibInterval = 60, # longer intervals, e.g. = 300 better for STOF (otherwise mass calib peaks not visible)
+    resolution = 7500  # approx. 2000 for STOF
 	)
     baselineAndPeakshape(
 	    fp,
-	    peakshapeRegions=8,
+	    peakshapeRegions=6,
+		peakshapeRegionStretch=0.5,
 	    peakshapeQuantileValue = 0.1,
-	    peakfindingNoiseThresholdValue = 25
-	)
+	    peakfindingNoiseThresholdValue = 10,
+		peakfindingSignalLimit = 0.1,
+		baselineThreshold = 0.3)
+		
     mtrx = deconvolute(
 	    fp,
 	    calcTransposed = true,

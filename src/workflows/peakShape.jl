@@ -13,22 +13,19 @@ function baselineAndPeakshape(
   peakshapeQuantileValue = 0.1,
   peakfindingNoiseThresholdValue = 25,
   peakWindowWidth = 200,
-  peakfindingSignalLimit = 0.2
+  peakfindingSignalLimit = 0.2,
+  baselineThreshold = 0.2
   )
 
   file = joinpath(filepath, outputfilename)
   massAxis = HDF5.h5read(file, "MassAxis")
   avgSpectrum = HDF5.h5read(file, "AvgSpectrum")
 
-  baselinePoints, baselineValues, baselineNoise = BaselineFunctions.calculateBaseline(massAxis,avgSpectrum,baselinePointWidth = 0.8, threshold=0.2)
+  baselinePoints, baselineValues, baselineNoise = BaselineFunctions.calculateBaseline(massAxis,avgSpectrum,baselinePointWidth = 0.8, baselineThreshold=baselineThreshold)
   baselinePoints = collect(baselinePoints)
   baselineNoiseInterpolated = InterpolationFunctions.interpolate(massAxis, baselinePoints, baselineNoise)
   baselineInterpolated = InterpolationFunctions.interpolate(massAxis, baselinePoints, baselineValues)
   baselineCorrectedAvgSpec = avgSpectrum[:,1] - baselineInterpolated;
-
-
-  peakIndices = PeakshapeFunctions.findPeakIndices(massAxis, avgSpectrum, baselineInterpolated, baselineNoiseInterpolated, noiseThreshold = peakfindingNoiseThresholdValue, signalLimit = peakfindingSignalLimit)
-  peakShapesCenterMass, peakShapesY = PeakshapeFunctions.calculatePeakshapes(massAxis, baselineCorrectedAvgSpec, peakIndices, nbrMassRegions = peakshapeRegions,regionStretch=peakshapeRegionStretch, peakWindowWidth = peakWindowWidth, quantileValue = peakshapeQuantileValue)
 
   PythonPlot.figure()
   PythonPlot.title("Baseline Correction")
@@ -37,6 +34,8 @@ function baselineAndPeakshape(
   #semilogy(peakMasses, peakValues, "x")
   PythonPlot.semilogy(massAxis,avgSpectrum)
 
+  peakIndices = PeakshapeFunctions.findPeakIndices(massAxis, avgSpectrum, baselineInterpolated, baselineNoiseInterpolated, noiseThreshold = peakfindingNoiseThresholdValue, signalLimit = peakfindingSignalLimit)
+  peakShapesCenterMass, peakShapesY = PeakshapeFunctions.calculatePeakshapes(massAxis, baselineCorrectedAvgSpec, peakIndices, nbrMassRegions = peakshapeRegions,regionStretch=peakshapeRegionStretch, peakWindowWidth = peakWindowWidth, quantileValue = peakshapeQuantileValue)
 
   ############ delete h5 data that will be overwritten ###########
   fh = HDF5.h5open(file,"r+")

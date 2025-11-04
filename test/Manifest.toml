@@ -2,7 +2,7 @@
 
 julia_version = "1.11.7"
 manifest_format = "2.0"
-project_hash = "8f89a67a202690c0f45488ef5192ed9ddb09f2cf"
+project_hash = "7440a23050e67df87f5bbbe3373445dc478f37c2"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "27cecae79e5cc9935255f90c53bb831cc3c870d7"
@@ -1027,7 +1027,7 @@ uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 version = "0.2.8"
 
 [[deps.TOFTracer2]]
-deps = ["CSV", "ColorSchemes", "DSP", "DataFrames", "Dates", "DelimitedFiles", "Distributed", "HDF5", "LaTeXStrings", "LsqFit", "PyCall", "PythonPlot", "Revise", "SharedArrays", "SparseArrays", "SpecialFunctions", "Statistics", "Trapz"]
+deps = ["CSV", "ColorSchemes", "DSP", "DataFrames", "Dates", "DelimitedFiles", "Distributed", "HDF5", "LaTeXStrings", "LsqFit", "PythonCall", "PythonPlot", "Revise", "SharedArrays", "SparseArrays", "SpecialFunctions", "Statistics", "Trapz"]
 path = ".."
 uuid = "767abeae-b283-44e3-97fa-db60ef46027d"
 version = "0.2.0"

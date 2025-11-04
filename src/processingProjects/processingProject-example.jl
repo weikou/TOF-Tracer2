@@ -31,7 +31,7 @@ correctMassScaleAndExtractSumSpec(
     rf,
     cr,
     filefilterRegexp=filefilterRegexp,
-    onlyUseAverages = true,
+    onlyUseAverages = false,
     plotControlMass = true,
     firstNFiles=0,
     lastNFiles = 0,
@@ -46,11 +46,12 @@ correctMassScaleAndExtractSumSpec(
 if goodSignal2Noise # PTR3 case
 	baselineAndPeakshape(
 		fp, 
-		peakshapeRegions=8,
+		peakshapeRegions=6,
 		peakshapeRegionStretch=0.5,
 		peakshapeQuantileValue = 0.1,
-		peakfindingNoiseThresholdValue = 25,
-		peakfindingSignalLimit = 0.2
+		peakfindingNoiseThresholdValue = 10,
+		peakfindingSignalLimit = 0.1,
+        baselineThreshold = 0.3
 		)
 else # STOF case
 	baselineAndPeakshape(
@@ -59,7 +60,8 @@ else # STOF case
 		peakshapeRegionStretch=1,
 		peakshapeQuantileValue = 0.2, 		
 		peakfindingNoiseThresholdValue = 2,	
-		peakfindingSignalLimit = 0.01		
+		peakfindingSignalLimit = 0.01,
+        threshold = 0.2	
 		)
 end
 

@@ -46,12 +46,13 @@ correctMassScaleAndExtractSumSpecAPi(
     )
 baselineAndPeakshape(
     fp,
-    peakshapeRegions=4,
+    peakshapeRegions=2,
     peakshapeRegionStretch=1.0,
     peakshapeQuantileValue = 0.7,
     peakfindingNoiseThresholdValue = 5,
     peakWindowWidth = 100,
-    peakfindingSignalLimit=0.5
+    peakfindingSignalLimit=0.05,
+    baselineThreshold = 0.2,
     )
 mtrx = deconvolute(
     fp,

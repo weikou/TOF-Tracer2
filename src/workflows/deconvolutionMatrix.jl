@@ -109,13 +109,15 @@ function deconvolute(
 
   fh = HDF5.h5open(file,"r+")
   
+  #=
   if haskey(fh,"CorrStickCps")
     HDF5.delete_object(fh,"CorrStickCps")
   end
   if haskey(fh,"CorrStickCpsErrors")
     HDF5.delete_object(fh,"CorrStickCpsErrors")
   end
-
+  =#
+  
   if haskey(fh,"StickCps")
     haveStickCps = true
 
