@@ -36,7 +36,24 @@ module PlotFunctions
 	colorbarticklabels=[],
 	colorbarextend="neither", # other options: "both","max"
 	"""
-	function massDefectPlot(masses, compositions, concentrations, colors; plotTitle = " ", colorCodeTitle = " ", dotSize = 10, marker="o", maxMass = 450, maxDefect = 0.25, minConc = 0.02, sumformulas = false, ionization = "H+", scaleAreaLinearly=false, colormap="viridis",norm=0, colvmin=0, colvmax=1, colorbarticks=[],colorbarticklabels=[], colorbarextend="neither",newfigure=true, connectingLines=false, cutoffAtminConc = true, showColorbar=true, showLegend=true)
+	function massDefectPlot(masses, compositions, concentrations, colors; 
+		plotTitle = " ", 
+		colorCodeTitle = " ", 
+		dotSize = 10, 
+		marker="o", 
+		maxMass = 450, 
+		maxDefect = 0.25, 
+		minConc = 0.02, 
+		sumformulas = false, 
+		ionization = "H+", 
+		scaleAreaLinearly=false, 
+		colormap="viridis",
+		norm=0, colvmin=0, colvmax=1, 
+		colorbarticks=[],colorbarticklabels=[], colorbarextend="neither", showColorbar=true, 
+		newfigure=true, 
+		connectingLines=false, 
+		cutoffAtminConc = true, 
+		showLegend=true)
 	  if newfigure
 	    fig = figure()
       end

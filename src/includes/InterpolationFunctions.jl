@@ -230,7 +230,25 @@ module InterpolationFunctions
     """
         interpolatedSum(startIndexExact::AbstractFloat, endIndexExact::AbstractFloat, yAxis)
         
-    Returns the interpolated sum over the yAxis array between exact indices.
+    Compute a sub-index–aware sum (integral) of a segment within an array `yAxis`, using linear interpolation at the fractional boundaries.
+	# Arguments	
+	- `startIndexExact::AbstractFloat`: The exact (possibly fractional) starting index of the segment to sum.
+	- `endIndexExact::AbstractFloat`: The exact (possibly fractional) ending index of the segment to sum.
+	- `yAxis::AbstractVector`: The array of values to sum over.
+
+	# Returns
+	- `ret::Float64`: The computed sum over the specified segment, accounting for fractional contributions at the boundaries.
+
+	# Notes
+	- The function assumes `yAxis` contains uniformly spaced samples.
+	- Fractional corrections (`subIdxStartRoundError` and `subIdxEndRoundError`) are used to interpolate boundary points.
+	- Out-of-bounds ranges result in a warning: `"interpolatedSum returns 0, as startIndexExact or endIndexExact were out-of-bounds."`
+
+	# Example
+	```julia
+	yAxis = [0, 2, 4, 6, 8, 10]
+	val = InterpolationFunctions.interpolatedSum(1.3, 4.7, yAxis)
+	# Integrates between ~indices 1.3 and 4.7 → returns ≈ 18.4
     """
 	function interpolatedSum(startIndexExact::AbstractFloat, endIndexExact::AbstractFloat, yAxis)
 	  subIdxStart::Int64 = ceil(startIndexExact)

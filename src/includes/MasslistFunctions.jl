@@ -420,8 +420,6 @@ module MasslistFunctions
         sumFormulaStringFromCompositionArray(composition; elements = masslistElements, ion = "H+", correctForIon=true)
         
     Determines the sumFormula string from a composition array of the form as given by the elements list. 
-    
-    THIS IS BUGGY: IT DOES CURRENTLY NOT CORRECT FOR IONS WITHIN THE COMPOSITION ARRAY!!!
         
     # Examples:
     julia> sumFormulaStringFromCompositionArray([10,0,19,1,1,2,0,0]; ion="NH3H+") == "C10H16O2.NH3H+"
