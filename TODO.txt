@@ -19,3 +19,5 @@ getindex -> dot overloading
 ┌ Warning: `getindex(o::PyObject, s::AbstractString)` is deprecated in favor of dot overloading (`getproperty`) so elements should now be accessed as e.g. `o."s"` instead of `o["s"]`.
 │   caller = massDefectPlot(masses::Vector{Float64}, compositions::Matrix{Int64}, concentrations::Vector{Float64}, colors::Vector{Float64}; plotTitle::String, colorCodeTitle::String, dotSize::Int64, marker::String, maxMass::Int64, maxDefect::Float64, minConc::Float64, sumformulas::Bool, ionization::String, scaleAreaLinearly::Bool, colormap::String, norm::Int64, colvmin::Int64, colvmax::Int64, colorbarticks::Vector{Any}, colorbarticklabels::Vector{Any}, colorbarextend::String, newfigure::Bool, connectingLines::Bool, cutoffAtminConc::Bool, showColorbar::Bool, showLegend::Bool) at PlotFunctions.jl:120
 └ @ TOFTracer2.PlotFunctions C:\Users\c7441225\Documents\TOF-Tracer2\src\includes\PlotFunctions.jl:120
+
+- use expandCompositions() to join different Masslists with different Compositions

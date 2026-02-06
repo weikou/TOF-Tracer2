@@ -1,5 +1,8 @@
 *.cov
 *.info
+config.ini
+.CondaPkg/
+test/.CondaPkg/
 ExampleFiles/TOFDATA/results/
 ExampleFiles/APiTOFDATA/results/
 docs/build/
