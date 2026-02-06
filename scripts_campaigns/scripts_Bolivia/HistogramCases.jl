@@ -97,32 +97,33 @@ end
 
 # *****************************      LOAD TRACES       *********************************************************************
 
-fp = "/home/wiebke/Documents/UIBK/Bolivia/"
-savefp = fp*"FT_BL/"
-fn = "data_and_code/rawData/ptr3TracesSulfur.csv"
-ptr3datSulfur = CSV.read(fp*fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
-fn = "data_and_code/rawData/nitrateCIMSTraces.csv"
-no3cimsdat = CSV.read(fp*fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
-fn = "data_and_code/rawData/MeteoTraces.csv"
-meteodat = CSV.read(fp*fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
-fn = "data_and_code/rawData/ACSMTraces.csv"
-acsmdat = CSV.read(fp*fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
-fn = "data_and_code/rawData/SMPSdata_binsize_nm.csv"
-smpsdat = CSV.read(fp*fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
-fn = "data_and_code/rawData/SRRTraces.csv"
-srrdat = CSV.read(fp*fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
+fp = joinpath(@__DIR__,"..","..","..","UIBK","Bolivia")
+savefp = joinpath(fp,"FT_BL")
+rawdatafp = joinpath(fp,"data_and_code","rawData")
+fn = joinpath(rawdatafp, "ptr3TracesSulfur.csv")
+ptr3datSulfur = CSV.read(fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
+fn = joinpath(rawdatafp, "nitrateCIMSTraces.csv")
+no3cimsdat = CSV.read(fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
+fn = joinpath(rawdatafp, "MeteoTraces.csv")
+meteodat = CSV.read(fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
+fn = joinpath(rawdatafp, "ACSMTraces.csv")
+acsmdat = CSV.read(fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
+fn = joinpath(rawdatafp, "SMPSdata_binsize_nm.csv")
+smpsdat = CSV.read(fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
+fn = joinpath(rawdatafp, "SRRTraces.csv")
+srrdat = CSV.read(fn, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS")
 data = leftjoin(ptr3datSulfur, no3cimsdat; on = "DateTime")
 data = leftjoin(data, meteodat; on = "DateTime")
 data = leftjoin(data, acsmdat; on = "DateTime")
 data = leftjoin(data, srrdat; on = "DateTime")
 
 # PTR3 data
-fntraces = "data_and_code/rawData/ptr3.csv"
-fnpeaks = "data_and_code/rawData/ptr3peaks.csv"
-ptr3dat = CSV.read(fp*fntraces, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS", header=1, skipto=3)
+fntraces = joinpath(rawdatafp, "ptr3.csv")
+fnpeaks = joinpath(rawdatafp, "ptr3peaks.csv")
+ptr3dat = CSV.read(fntraces, DataFrame; delim="\t", dateformat="yyyy-mm-ddTHH:MM:SS", header=1, skipto=3)
 ptr3Times = ptr3dat.Time_1 .- Hour(1)
 ptr3Traces = select(ptr3dat,Not([:Time,:Time_1]))
-ptr3Peaks = CSV.read(fp*fnpeaks, DataFrame)
+ptr3Peaks = CSV.read(fnpeaks, DataFrame)
 ptr3Masses = ptr3Peaks[:,1]
 
 ptr3Traces_select = ptr3Traces[toi[1] .<= ptr3Times .<= toi[2],:]
@@ -679,9 +680,9 @@ fig.savefig("$(savefp)MDplot_increase3stderr_minConc004.pdf")
 figure()
 #plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,alkanalfilter]),dims=2), label="summed alkanals")
 #plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,((ptr3Peaks.C .== 4) .& alkanalfilter)]),dims=2), label="C4H8O")
-plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,((ptr3Peaks.C .> 5) .& alkanalfilter)]),dims=2), label="long-chain alkanals")
+plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,((ptr3Peaks.C .> 7) .& alkanalfilter)]),dims=2), label="long-chain alkanals")
 #plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,alkanoicacidfilter]),dims=2), label="summed alkanoicacids")
-plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,((ptr3Peaks.C .> 5) .& alkanoicacidfilter)]),dims=2), label="long-chain alkanoicacids")
+plot(intpolDT, IntpF.nansum(Matrix(ptr3Traces_select[:,((ptr3Peaks.C .> 7) .& alkanoicacidfilter)]),dims=2), label="long-chain alkanoicacids")
 axvspan(DateTime(2018,5,11,07,20),DateTime(2018,5,11,09,31),alpha=0.1, color="blue")
 axvspan(DateTime(2018,5,15,03,55),DateTime(2018,5,15,08,31),alpha=0.1, color="blue")
 axvspan(DateTime(2018,5,18,04,25),DateTime(2018,5,18,08,31),alpha=0.1, color="blue")

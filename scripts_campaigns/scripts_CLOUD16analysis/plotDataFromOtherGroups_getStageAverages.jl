@@ -9,7 +9,8 @@ plottingVolatilitiesRO2 = false
 
 if loadAllData
 	println("load data...")
-	data_HOx_smoothed = loadHOxData()
+	file_HOx=joinpath(fp, "HORUS", "HORUS_MPIC_HOxROx_CLOUD16_ALL_V1.txt")
+	data_HOx_smoothed = loadHOxData(file_HOx; startTime=startSurfactantRuns, endTime=endSurfactantRuns)
 	println("HOx data loaded.")
 	data_J17 = loadJ17Data()
 	println("J1.7 data loaded.")

@@ -1,7 +1,7 @@
 using HDF5
 #import PyCall
 #pygui(:tk) # :tk, :gtk3, :gtk, :qt5, :qt4, :qt, or :wx
-using PyPlot
+using PythonPlot
 using Dates
 using CSV
 using DataFrames
@@ -21,27 +21,42 @@ import TOFTracer2.ImportFunctions as ImpF
 ##############################################
 
 # should cover the full period to calibrate (or as much as possible):
-frostpointfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/Surfactants_dataFromOthers/frostpoint.csv"
+#frostpointfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/Surfactants_dataFromOthers/frostpoint.csv"
+frostpointfile = raw"D:\Backup_ExtremeSSD_Feb2024\CLOUD16\Surfactants_dataFromOthers\frostpoint.csv"
 frostpointDatetimeFormat = "dd-mm-yy HH:MM:SS"
 frostpointLabel = "fp_MBW" # should be the label as from the file!
 
-licorFilepath = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/LicorData/"
+#licorFilepath = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/LicorData/"
+licorFilepath = raw"D:\Backup_ExtremeSSD_Feb2024\CLOUD16\LicorData"
 
 # this file contains the parameters from the previous analysis of humidity-dependent calibration:
-humcalibfp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/humdepcalib_2023-11-18_STD1_STD2/results/STD2/fitParameters_relative.txt"
+#humcalibfp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/humdepcalib_2023-11-18_STD1_STD2/results/STD2/fitParameters_relative.txt"
+humcalibfp = raw"D:\Backup_ExtremeSSD_Feb2024\CLOUD16\PTR3\humdepcalib_2023-11-18_STD1_STD2\results\STD2\fitParameters_relative.txt"
 
 # this ican be either the processed file of the dry calibrations or the CSV file containing the exported hexanone vs primary ion parameters for loading them:
-drycalibsfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/calibs/results/resultsHexanone_VS_PIs_params.csv"
+# drycalibsfile = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/calibs/results/resultsHexanone_VS_PIs_params.csv"
+drycalibsfile = raw"D:\Backup_ExtremeSSD_Feb2024\CLOUD16\PTR3\calibs\results\resultsHexanone_VS_PIs_params.csv"
 
 # enter here the file that should be calibrated at once (require to be processed with the same masslist!!!):
-resultfp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/Surfactants/data/rawData/"
-resultfiles = ["$(resultfp)part1/results/_result.hdf5","$(resultfp)part2/results/_result.hdf5"]
+# resultfp = "/media/wiebke/Elements/Backup_ExtremeSSD_Feb2024/CLOUD16/PTR3/Surfactants/data/rawData/"
+#resultfp = raw"D:\BackUp_AGHansel_PTR3PC_CLOUD16\CLOUD16\selected_HighTimeRes"
+resultfp = raw"C:\Users\c7441225\Documents\UIBK\CLOUD\CLOUD16\data\PTR3\HighTimeResolution"
+resultfiles = [joinpath(resultfp, "_result_min15C.hdf5"),joinpath(resultfp, "_result_plus10C.hdf5")]
 
-ionization = "NH4+" # "NH4+", "H+"...
+useOnlyAverages = false # if true, only the average traces will be used for calibration
+
+ionization = "NH3H+" # "H+"...
 primaryionslist = [] # leave empty -> default: adding all possible water and ammonium clusters
 
 refMass = massLibrary.ACETONE_nh4[1] # HEXANONE_nh4[1] ; ACETONE_nh4[1] ; MVK_nh4[1]
-refName = TOFTracer2.MasslistFunctions.sumFormulaStringFromCompositionArray(massLibrary.ACETONE_nh4[4]; ion = "")
+refName = "C3H9ON" # TOFTracer2.MasslistFunctions.sumFormulaStringFromCompositionArray(massLibrary.ACETONE_nh4[4]; ion = "H+")
+
+# compositions2Export
+compositions2Export_helper, instrumentDF = TOFTracer2.ImportFunctions.importExportedCompositions(
+    raw"C:\Users\c7441225\Documents\UIBK\CLOUD\CLOUD16\data\combinedMassSpecs\ptr3compositions_combinedData_checked_zerocorrected.txt";nrElements = 5)
+compositions2Export_ = MasslistFunctions.expandCompositions(compositions2Export_helper.MasslistCompositions[:,instrumentDF.Instrument .== 1.0],compositions2Export_helper.MasslistElements)
+compositions2Export = compositions2Export_ .+ massLibrary.NH3[4]
+
 
 exportTraces = true # if true, check HeaderForExportDict below:
 HeaderForExportDict = Dict(
@@ -130,15 +145,15 @@ if isempty(primaryionslist)
     primaryionslist = massLibrary.FullPrimaryionslist_NH4soft
 end
 
-mResfinal_PIs = ResultFileFunctions.loadResults(resultfiles[1]; useAveragesOnly=true, massesToLoad=primaryionslist)
-mResfinal = ResultFileFunctions.loadResults(resultfiles[1]; useAveragesOnly=true)
+mResfinal_PIs = ResultFileFunctions.loadResults(resultfiles[1]; useAveragesOnly=useOnlyAverages, massesToLoad=primaryionslist)
+mResfinal = ResultFileFunctions.loadResults(resultfiles[1]; useAveragesOnly=useOnlyAverages)
 if length(resultfiles) > 1
     for i in 2:length(resultfiles)
         global mResfinal_PIs
         global mResfinal
-        mres_pi_i = ResultFileFunctions.loadResults(resultfiles[i]; useAveragesOnly=true, massesToLoad=primaryionslist)
+        mres_pi_i = ResultFileFunctions.loadResults(resultfiles[i]; useAveragesOnly=useOnlyAverages, massesToLoad=primaryionslist)
         mResfinal_PIs = ResultFileFunctions.joinResultsTime(mResfinal_PIs, mres_pi_i)
-        mres_i = ResultFileFunctions.loadResults(resultfiles[i]; useAveragesOnly=true)
+        mres_i = ResultFileFunctions.loadResults(resultfiles[i]; useAveragesOnly=useOnlyAverages)
         mResfinal = ResultFileFunctions.joinResultsTime(mResfinal, mres_i)
     end
 end
@@ -185,7 +200,7 @@ for (name, mass) in zip(calibDF[!, "Sumformula"], calibDF[!, "Mass"])
         append!(indices, index)
     end
 end
-
+#=
 figure(figsize=(10,6))
 plot(mResfinal.Times, dcps_per_ppb[:, indices])
 plot(mResfinal.Times, summedPIs)
@@ -194,16 +209,16 @@ for i in 1:length(indices)
     legStrings[i] = "index $(indices[i]) - "* string(round(mResfinal.MasslistMasses[indices[i]],digits=2)) * ", " * MasslistFunctions.sumFormulaStringFromCompositionArray(mResfinal.MasslistCompositions[:,indices[i]])
 end
 legStrings[end] = "summed primary ions"
-legend(legStrings)
+legend(legStrings, loc=1)
 ylabel(" calibration factor [dcps / ppb]")
 xlabel("time [UTC]")
-savefig("$(resultfp)CalibrationTraces.png")
-savefig("$(resultfp)CalibrationTraces.pdf")
+savefig(joinpath(resultfp, "CalibrationTraces.png"))
+savefig(joinpath(resultfp, "CalibrationTraces.pdf"))
 
 ############################################################################
 # plot directly calibrated traces and manually filter out problematic times
 ############################################################################
-figure(figsize=(10,6))
+fig = figure(figsize=(10,6))
 axdirectCalibTraces = subplot(111)
 plot(mResfinal.Times, 1000.0 .* mResfinal.Traces[:,indices] ./ dcps_per_ppb[:, indices])
 plot(mResfinal.Times, summedPIs)
@@ -212,15 +227,15 @@ for i in 1:length(indices)
     legStrings[i] = "index $(indices[i]) - "* string(round(mResfinal.MasslistMasses[indices[i]],digits=2)) * ", " * MasslistFunctions.sumFormulaStringFromCompositionArray(mResfinal.MasslistCompositions[:,indices[i]])
 end
 legStrings[end] = "summed primary ions"
-legend(legStrings)
+legend(legStrings,loc=1)
 ylabel("concentration [ppt]")
 xlabel("time [UTC]")
 yscale("log")
 ylim(1e-2,maximum(summedPIs)*2)
-savefig("$(resultfp)DirectlyCalibratedTraces.png")
-savefig("$(resultfp)DirectlyCalibratedTraces.pdf")
+savefig(joinpath(resultfp, "DirectlyCalibratedTraces.png"))
+savefig(joinpath(resultfp, "DirectlyCalibratedTraces.pdf"))
 
-ifig_directCalibTraces = PlotFunctions.InteractivePlot("",axdirectCalibTraces)
+ifig_directCalibTraces = PlotFunctions.InteractivePlot("",axdirectCalibTraces, fig)
 PlotFunctions.getMouseCoords(ifig_directCalibTraces;datetime_x=true)
 println("\n\nYou have now the opportunity to select start- and endtimes of periods to delete, e.g. due to \n    - ion source breakdown, \n    - calibration residues, \n    - ... \n Select times by clicking 'd'. Press 'q' to quit.")
 while true
@@ -232,7 +247,7 @@ if (length(ifig_directCalibTraces.deleteXlim) > 0) && (length(ifig_directCalibTr
         mResfinal.Traces[ifig_directCalibTraces.deleteXlim[i].<=mResfinal.Times.<=ifig_directCalibTraces.deleteXlim[i+1], :] .= NaN
     end
 end
-
+=#
 
 ########################################################################
 # estimating the uncertainty of calibration
@@ -261,8 +276,22 @@ println("The relative standarderror of this method alone is a factor ",
 if exportTraces
     filterCnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "C"),:] .>= 1
     filterNoCalib = vec(sum(dcps_per_ppb;dims=1) .> 0)
-    filterNnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "N"),:] .== 1
+    filterNnr = mResfinal.MasslistCompositions[findfirst(mResfinal.MasslistElements .== "N"),:] .>= 1
     finalfilter = ((filterCnr .& filterNoCalib .& filterNnr)) #.| undeffilter)
+
+    # filter based on previously exported MasslistCompositions:
+    if compositions2Export != 0
+        filterExported = zeros(Bool, size(mResfinal.MasslistCompositions,2))
+        for i in 1:size(mResfinal.MasslistCompositions,2)
+            for j in 1:size(compositions2Export,2)
+                if all(mResfinal.MasslistCompositions[:,i] .== compositions2Export[:,j])
+                    filterExported[i] = true
+                    break
+                end
+            end
+        end
+        finalfilter = finalfilter .& filterExported
+    end
 
     calibResult = ResultFileFunctions.MeasurementResult(mResfinal.Times,
         mResfinal.MasslistMasses[finalfilter],
@@ -303,11 +332,12 @@ if exportTraces
 
     # or with an interactive figure
 
+    #=
     iifig = PlotFunctions.InteractivePlot(calibResult)
     #PlotFunctions.changeLastPlotTo(iifig,139)
     PlotFunctions.scrollAddTraces(iifig)
     IndOfinterest = unique(iifig.activeIndices)
-
+    =#
     #=IndOfinterest = unique(sort(vcat(
         IndOfinterest1,
         IndOfinterest2,
@@ -337,12 +367,12 @@ if exportTraces
 
         TOFTracer2.ExportFunctions.exportTracesCSV_CLOUD(resultfp,
             calibResult.MasslistElements,
-            calibResult.MasslistMasses[IndOfinterest],
-            calibResult.MasslistCompositions[:,IndOfinterest],
+            calibResult.MasslistMasses, #[IndOfinterest],
+            calibResult.MasslistCompositions, #[:,IndOfinterest],
             calibResult.Times,
-            calibResult.Traces[:,IndOfinterest];
+            calibResult.Traces, #[:,IndOfinterest];
             transmission=0,
             headers = HeaderForExport,
             ion = ionization,
-            average=0)
+            average=60)
 end

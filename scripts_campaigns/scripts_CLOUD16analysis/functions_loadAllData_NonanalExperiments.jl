@@ -1,15 +1,14 @@
 
-"""	loadHOxData()
+"""	loadHOxData(fp; startTime::DateTime, endTime::DateTime)
 		returns one dataframe containing HOx data
 """
-function loadHOxData()
-	# load HOx data (Felix Kunkler)
-	file_HOx="$(fp)HORUS/HORUS_MPIC_HOxROx_CLOUD16_ALL_V1.txt"
-
+function loadHOxData(file_HOx; startTime=startSurfactantRuns, endTime=endSurfactantRuns)
+	# load HOx data (by Felix Kunkler)
 	nrheaderlines = parse(Int64,split(readlines(file_HOx)[1]," ")[2])
-	data_HOx = DataFrame(CSV.File(file_HOx, header = nrheaderlines))
-	data_HOx.Time = DateTime.(data_HOx.Time," yyyy-mm-dd HH:MM:SS")
-	data_HOx = data_HOx[startSurfactantRuns .< data_HOx.Time .< endSurfactantRuns,:]
+	data_HOx = CSV.read(file_HOx, DataFrame, header = nrheaderlines)
+	data_HOx.Time = strip.(data_HOx.Time) # remove trailing spaces
+	data_HOx.Time = DateTime.(data_HOx.Time,dateformat"yyyy-mm-dd HH:MM:SS")
+	data_HOx = data_HOx[startTime .< data_HOx.Time .< endTime,:]
 	data_HOx_smoothed = DataFrame()
 	avPoints = 23 # 5 mins!
 	data_HOx_smoothed.Time = IntpF.averageSamples(data_HOx.Time,avPoints)
@@ -21,15 +20,18 @@ function loadHOxData()
 	(data_HOx_smoothed.HO2_RO2_ppt,data_HOx_smoothed.HO2_RO2_ppt_errs) = h
 	data_HOx_smoothed.RO2_ppt = data_HOx_smoothed.HO2_RO2_ppt .- data_HOx_smoothed.HO2_ppt
 	data_HOx_smoothed.RO2_ppt_errs = sqrt.(data_HOx_smoothed.HO2_RO2_ppt_errs.^2 .+ data_HOx_smoothed.HO2_ppt_errs.^2)
+	if "OH_det_lim_ppt" in names(data_HOx)
+		data_HOx_smoothed.OH_det_lim_ppt = IntpF.averageSamples(data_HOx.OH_det_lim_ppt,avPoints;ignoreNaNs=true)
+	end
 	return data_HOx_smoothed
 end
 
 """	loadJ17Data()
 		returns one dataframe containing J17 data
 """
-function loadJ17Data()
+function loadJ17Data(fp)
 	# load J1.7 data (Wenjuan Yu)
-	file_J17="$(fp)PSM/J17_terms_2602.06_2691.07_method_2.csv"
+	file_J17=joinpath(fp, "PSM", "J17_terms_2602.06_2691.07_method_2.csv")
 	data_J17 = DataFrame(CSV.File(file_J17, header = 1))
 	data_J17.Time = DateTime.(data_J17.Time,"dd-u-yyyy HH:MM:SS") # u: Sep, Oct,...
 	data_J17 = data_J17[startSurfactantRuns .< data_J17.Time .< endSurfactantRuns,:]
@@ -39,15 +41,15 @@ end
 """	loadNOxData()
 		returns two dataframes: data_NO and data_NO2
 """
-function loadNOxData()
+function loadNOxData(fp)
 	# load NO data
-	file_NO = "$(fp)NO/NO_PSI_UFRA_CLOUD16_ALL_v2.txt"
+	file_NO = joinpath(fp, "NO","NO_PSI_UFRA_CLOUD16_ALL_v2.txt")
 	nrheaderlines = parse(Int64,split(readlines(file_NO)[1]," ")[5])
 	data_NO = DataFrame(CSV.File(file_NO, header = 13))
 	data_NO.Datetime = DateTime.(data_NO.Datetime,"dd-u-yyyy HH:MM:SS")
 	
 	# load NO2 data
-	file_NO2 = "$(fp)NO2/NO2_PSI_CLOUD16_ALL_v2.txt"
+	file_NO2 = joinpath(fp, "NO2","NO2_PSI_CLOUD16_ALL_v2.txt")
 	nrheaderlines = parse(Int64,split(readlines(file_NO2)[1]," ")[5])
 	data_NO2 = DataFrame(CSV.File(file_NO2, header = 13))
 	data_NO2.Datetime = DateTime.(data_NO2.Datetime,"dd-u-yyyy HH:MM:SS")
@@ -61,9 +63,9 @@ end
 """	loadO3Data()
 		returns one dataframe
 """
-function loadO3data()
+function loadO3data(fp)
 	# load O3 data
-	file_O3 = "$(fp)O3.csv"
+	file_O3 = joinpath(fp, "O3.csv")
 	data_O3 = DataFrame(CSV.File(file_O3, header = 1))
 	data_O3.time = DateTime.(data_O3.time,"dd-mm-yyyy HH:MM:SS")
 	data_O3_smoothed = DataFrame()
@@ -74,35 +76,35 @@ function loadO3data()
 	return data_O3_smoothed
 end
 
-"""	loadDMAtrainData()
+"""	loadDMAtrainData(fp)
 		returns one dataframe
 """
-function loadDMAtrainData()
+function loadDMAtrainData(fp)
 	# load DMAtrain data
-	file_DMAtrain = "$(fp)DMAtrain/grCLOUD16_surfactants.txt"
+	file_DMAtrain = joinpath(fp, "DMAtrain","grCLOUD16_surfactants.txt")
 	data_DMAtrain = DataFrame(CSV.File(file_DMAtrain, header = 1))
 	data_DMAtrain.starttime = [DateTime(t[1:19], "yyyy-mm-dd HH:MM:SS") for t in data_DMAtrain.starttime]
 	data_DMAtrain.endtime = [DateTime(t[1:19], "yyyy-mm-dd HH:MM:SS") for t in data_DMAtrain.endtime]
 	return data_DMAtrain
 end
 
-elementlist = ["C","H","O","N","S"]
+elementlist = MasslistFunctions.masslistElements #["C","H","O","N","S"]
 elementlist_masses = MasslistFunctions.createElementMassesArray(elementlist)
 
-"""	loadLTOFData()
+"""	loadLTOFData(fp)
 		returns a matrix of compositions, a datetime vector, a DataFrame containing the traces, and a vector of all indices to keep
 """
-function loadLTOFData()
+function loadLTOFData(fp)
 	# load LTOF data
 	
-	file_LTOF = "$(fp)NO3-LTOF/P1_Marine runs_traces_minus15.csv"
+	file_LTOF = joinpath(fp, "NO3-LTOF","P1_Marine runs_traces_minus15.csv")
 	data_LTOF = DataFrame(CSV.File(file_LTOF, header = 1))
 	data_LTOF.time = DateTime.(data_LTOF.time_datetime, "'dd-u-yyyy HH:MM:SS'")
 	data_LTOF = data_LTOF[:,2:end]
 
-	file_LTOF_peakTable = "$(fp)NO3-LTOF/P1_Nonanal runs_traces_minus15_allcompounds_peaktable.csv"
-	file_LTOF_allTraces = "$(fp)NO3-LTOF/P1_Nonanal runs_traces_minus15_allcompounds_traces.csv"
-	file_LTOF_organoNitrates = "$(fp)NO3-LTOF/ONO2 index into the peaklist_nonanal.csv"
+	file_LTOF_peakTable = joinpath(fp, "NO3-LTOF","P1_Nonanal runs_traces_minus15_allcompounds_peaktable.csv")
+	file_LTOF_allTraces = joinpath(fp, "NO3-LTOF","P1_Nonanal runs_traces_minus15_allcompounds_traces.csv")
+	file_LTOF_organoNitrates = joinpath(fp, "NO3-LTOF","ONO2 index into the peaklist_nonanal.csv")
 	data_LTOF_allTraces = DataFrame(CSV.File(file_LTOF_allTraces, header = 1))	
 	println("loaded $(length(names(data_LTOF_allTraces))) traces from LTOF file.")
 	data_LTOF_peakTable = DataFrame(CSV.File(file_LTOF_peakTable, header = 1))
@@ -117,8 +119,8 @@ function loadLTOFData()
 	LTOF_compositions_organics=MasslistFunctions.compositionFromNamesArray(data_LTOF_peakTable[LTOF_organicsFilter,"Compound"];
 		possibleElements=elementlist, ions=["NO3-","(HNO3)NO3-"])    
 
-	file_LTOF_peakTable_10C = "$(fp)NO3-LTOF/P2_Nonanal runs_traces_plus10_allcompounds_peaktable.csv"
-	file_LTOF_allTraces_10C = "$(fp)NO3-LTOF/P2_Nonanal runs_traces_plus10_allcompounds_traces.csv"
+	file_LTOF_peakTable_10C = joinpath(fp, "NO3-LTOF", "P2_Nonanal runs_traces_plus10_allcompounds_peaktable.csv")
+	file_LTOF_allTraces_10C = joinpath(fp, "NO3-LTOF", "P2_Nonanal runs_traces_plus10_allcompounds_traces.csv")
 	data_LTOF_allTraces_10C = DataFrame(CSV.File(file_LTOF_allTraces_10C, header = 1))
 	data_LTOF_peakTable_10C = DataFrame(CSV.File(file_LTOF_peakTable_10C, header = 1))
 	data_LTOF_allTraces_10C.time = DateTime.(data_LTOF_allTraces_10C[!,"Date time"], "'dd-u-yyyy HH:MM:SS'")
@@ -175,16 +177,16 @@ function loadLTOFData()
 	return LTOF_compositions_organics, LTOF_times, LTOF_traces_organics, LTOFindices2keep, LTOF_SA
 end
 
-"""	loadBrCUCIMSdata()
+"""	loadBrCUCIMSdata(fp)
 		returns data_BrCUCIMS_inorganics, data_BrCUCIMS_organicproducts, BrCUCIMS_compositions_organics
 """
-function loadBrCUCIMSdata()
+function loadBrCUCIMSdata(fp)
 	# load Br-CUCIMS data
-	file_BrCUCIMS_masses = "$(fp)Br-CUCIMS/mz.txt"
-	file_BrCUCIMS_names = "$(fp)Br-CUCIMS/mz_txt.txt"
-	file_BrCUCIMS_time = "$(fp)Br-CUCIMS/tseries_conc.txt"
-	file_BrCUCIMS_signals = "$(fp)Br-CUCIMS/Mx_data_ppt_final_conc.txt"
-	file_BrCUCIMS_signals_errs = "$(fp)Br-CUCIMS/Mx_data_ppt_final_conc.txt"
+	file_BrCUCIMS_masses = joinpath(fp, "Br-CUCIMS/mz.txt")
+	file_BrCUCIMS_names = joinpath(fp, "Br-CUCIMS/mz_txt.txt")
+	file_BrCUCIMS_time = joinpath(fp, "Br-CUCIMS/tseries_conc.txt")
+	file_BrCUCIMS_signals = joinpath(fp, "Br-CUCIMS/Mx_data_ppt_final_conc.txt")
+	file_BrCUCIMS_signals_errs = joinpath(fp, "Br-CUCIMS/Mx_data_ppt_final_conc.txt")
 	data_BrCUCIMS = DataFrame(CSV.File(file_BrCUCIMS_signals, header = 0, skipto=2))
 	println("loaded $(length(names(data_BrCUCIMS))) traces from BrCUCIMS file.")
 	# masses = DataFrame(CSV.File(file_BrCUCIMS_masses, header = 1)).mz
@@ -240,12 +242,12 @@ function loadBrCUCIMSdata()
 end
 
 """ 
-	loadBrMIONdata()
+	loadBrMIONdata(fp)
 	
 	returns 
 """
-function loadBrMIONdata()
-	file_BrMION = "$(fp)/BrMION/BrMION2CIMS_HEL_HO2normlizedsignal_CLOUD16_ALL_V1.csv"	
+function loadBrMIONdata(fp)
+	file_BrMION = joinpath(fp, "BrMION","BrMION2CIMS_HEL_HO2normlizedsignal_CLOUD16_ALL_V1.csv")
 	data_BrMION = coalesce.(DataFrame(CSV.File(file_BrMION, header = 1))[:,2:end],NaN)
 	println("loaded $(length(names(data_BrMION))) traces from BrMION file.")
 	rename!(data_BrMION,["C9H19O3-" => "(H2O)C9H17O2-","C9H19O5-" => "(H2O)C9H17O4-"])
@@ -348,46 +350,51 @@ end
 
 
 """
-	 loadPTR3data()
+	 loadPTR3data(fp)
 	 
-	 returns mRes, PTR3_compositions_organics 
+	 returns mRes
 """
-function loadPTR3data()
+function loadPTR3data(fp;resolution = "15s")
 	# load PTR3 data
-	#fpPTR3 = "/media/wiebke/Extreme SSD/CLOUD16/PTR3/Surfactants/data/"
-	file_PTR3comps1 = "$(fp)PTR3/PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.00_2630.10#_V1_compositions.txt"
-	file_PTR3comps2 = "$(fp)PTR3/PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.11_2631.64#_V1_compositions.txt"
-	file_PTR3comps3 = "$(fp)PTR3/PTR3_UIBK_Nonanal_oVOCs_T+10C_CLOUD16_#2631.66_2636#_V1_compositions.txt"
-	file_PTR3traces1 = "$(fp)PTR3/PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.00_2630.10#_V1_traces.csv"
-	file_PTR3traces2 = "$(fp)PTR3/PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.11_2631.64#_V1_traces.csv"
-	file_PTR3traces3 = "$(fp)PTR3/PTR3_UIBK_Nonanal_oVOCs_T+10C_CLOUD16_#2631.66_2636#_V1_traces.csv"
-	mRes1 = TOFTracer2.ImportFunctions.importExportedTraces(file_PTR3traces1,file_PTR3comps1;nrElements = 8)
-	mRes2 = TOFTracer2.ImportFunctions.importExportedTraces(file_PTR3traces2,file_PTR3comps2;nrElements = 8)
-	mRes3 = TOFTracer2.ImportFunctions.importExportedTraces(file_PTR3traces3,file_PTR3comps3;nrElements = 8)
-	mRes = ResultFileFunctions.joinResultsTime(mRes1,mRes2)
-	mRes = ResultFileFunctions.joinResultsTime(mRes,mRes3)
+	if resolution == "5min"
+		# load PTR3 organics data (here: oVOCs, 5min resolution, -15C and +10C)
+		file_PTR3comps1 = joinpath(fp,"PTR3","PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.00_2630.10#_V1_compositions.txt")
+		file_PTR3comps2 = joinpath(fp,"PTR3","PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.11_2631.64#_V1_compositions.txt")
+		file_PTR3comps3 = joinpath(fp,"PTR3","PTR3_UIBK_Nonanal_oVOCs_T+10C_CLOUD16_#2631.66_2636#_V1_compositions.txt")
+		file_PTR3traces1 = joinpath(fp,"PTR3","PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.00_2630.10#_V1_traces.csv")
+		file_PTR3traces2 = joinpath(fp,"PTR3","PTR3_UIBK_Nonanal_oVOCs_T-15C_CLOUD16_#2630.11_2631.64#_V1_traces.csv")
+		file_PTR3traces3 = joinpath(fp,"PTR3","PTR3_UIBK_Nonanal_oVOCs_T+10C_CLOUD16_#2631.66_2636#_V1_traces.csv")
+		mRes1 = TOFTracer2.ImportFunctions.importExportedTraces_compositionbasedSubset(file_PTR3traces1,file_PTR3comps1;nrElements = 8, compositionSubset=ptr3compositions_wanted)
+		mRes2 = TOFTracer2.ImportFunctions.importExportedTraces_compositionbasedSubset(file_PTR3traces2,file_PTR3comps2;nrElements = 8, compositionSubset=ptr3compositions_wanted)
+		mRes3 = TOFTracer2.ImportFunctions.importExportedTraces_compositionbasedSubset(file_PTR3traces3,file_PTR3comps3;nrElements = 8, compositionSubset=ptr3compositions_wanted)
+		mRes = ResultFileFunctions.joinResultsTime(mRes1,mRes2)
+		mRes = ResultFileFunctions.joinResultsTime(mRes,mRes3)
+	else
+		# load PTR3 organics data (here: oVOCs, 1s resolution, -15C and +10C)
+		file_PTR3comps = joinpath(fp,"PTR3","HighTimeResolution",resolution,"ptr3compositions_inletLossCorrected_differentTransmissions.txt")
+		file_PTR3traces = joinpath(fp,"PTR3","HighTimeResolution",resolution,"ptr3traces_CLOUDheader_15s_notCorrected.csv")
+		mRes = TOFTracer2.ImportFunctions.importExportedTraces(file_PTR3traces,file_PTR3comps;nrElements = 8)
+	end
 	mRes.Traces[mRes.Traces .< 0] .= NaN
-
-	PTR3_compositions_organics = mRes.MasslistCompositions[[findfirst(mRes.MasslistElements .== i) for i in elementlist],:]
-	
 	println("loaded $(length(mRes.MasslistMasses)) traces from PTR3 files.")
-	return mRes, PTR3_compositions_organics 
+	
+	return mRes
 end
 
 """
-	loadNonanalData()
+	loadNonanalData(fp)
 	returns two measResults: mRes_Nonanal_final, mResNonanal_PTR3, 
 	and two dataframes: Nonanal_STOF, and Nonanal_Fusion
 """
-function loadNonanalData()
-	mResNonanal_PTR3 = TOFTracer2.ImportFunctions.importExportedTraces("$(fp)PTR3/NonanalTrace_old.csv","$(fp)PTR3/NonanalComposition.txt";nrElements = 8)
+function loadNonanalData(fp)
+	mResNonanal_PTR3 = TOFTracer2.ImportFunctions.importExportedTraces(joinpath(fp,"PTR3","NonanalTrace_old.csv"),joinpath(fp,"PTR3","NonanalComposition.txt");nrElements = 8)
 
-	mRes_Nonanal_final = TOFTracer2.ImportFunctions.importExportedTraces("$(fp)PTR3/NonanalTrace_final_cm-3.csv","$(fp)PTR3/NonanalComposition.txt";nrElements = 8)
+	mRes_Nonanal_final = TOFTracer2.ImportFunctions.importExportedTraces(joinpath(fp,"PTR3","NonanalTrace_final_cm-3.csv"),joinpath(fp,"PTR3","NonanalComposition.txt");nrElements = 8)
 	
-	Nonanal_STOF = DataFrame(CSV.File("$(fp)STOF/NOnanal_STOF_BG_Correction.csv", header = 1))
+	Nonanal_STOF = DataFrame(CSV.File(joinpath(fp,"STOF","NOnanal_STOF_BG_Correction.csv"), header = 1))
 	Nonanal_STOF.datetime = [DateTime.(x[1:19], "yyyy-mm-dd HH:MM:SS") for x in Nonanal_STOF.time]
 
-	Nonanal_Fusion = DataFrame(CSV.File("$(fp)Fusion/Nonanal_fusion_newBG.csv", header = 1))
+	Nonanal_Fusion = DataFrame(CSV.File(joinpath(fp,"Fusion","Nonanal_fusion_newBG.csv"), header = 1))
 	Nonanal_Fusion.datetime = [DateTime.(x[1:19], "yyyy-mm-dd HH:MM:SS") for x in Nonanal_Fusion.time_string]
 
 	return mRes_Nonanal_final, mResNonanal_PTR3, Nonanal_STOF, Nonanal_Fusion
@@ -396,17 +403,19 @@ end
 ### start main here ###
 
 function combineMassSpecData_Organics(;beingselective = false)
-	LTOF_compositions_organics, LTOF_times, LTOF_traces_organics, LTOFindices2keep, LTOF_SA = loadLTOFData() # data from Nitrate CIMS
-	data_BrCUCIMS_inorganics, data_BrCUCIMS_organicproducts, BrCUCIMS_compositions_organics = loadBrCUCIMSdata()
-	comps_BrMION, time_BrMION, data_BrMION = loadBrMIONdata()
+	LTOF_compositions_organics, LTOF_times, LTOF_traces_organics, LTOFindices2keep, LTOF_SA = loadLTOFData(fp) # data from Nitrate CIMS
+	data_BrCUCIMS_inorganics, data_BrCUCIMS_organicproducts, BrCUCIMS_compositions_organics = loadBrCUCIMSdata(fp)
+	comps_BrMION, time_BrMION, data_BrMION = loadBrMIONdata(fp)
 	
-	mRes, PTR3_compositions_organics = loadPTR3data()
+	mRes = loadPTR3data(fp;resolution="15s")
 	# PTR3_log10C = CalF.log10C_T_CHONS(
 	#	PTR3_compositions_organics,258;
 	#	ionization="NH3",elementList=elementlist, correctIonInComposition=false)
-		
-	println("get interpolated selected mass spec traces.")
 	
+	#mRes.Traces = InterpolationFunctions.averageSamples(mRes.Traces, 30; dim=1, returnSTdev = false, ignoreNaNs = false)
+	#mRes.Times = InterpolationFunctions.averageSamples(mRes.Times, 30; dim=1, returnSTdev = false, ignoreNaNs = false)
+
+	println("get interpolated selected mass spec traces.")
 	LTOF_intpTraces = IntpF.interpolate(mRes.Times, LTOF_times, Matrix(LTOF_traces_organics[:,LTOFindices2keep])) # traces
 	mRes_LTOF_selected = TOFTracer2.ResultFileFunctions.MeasurementResult(
 		mRes.Times, # times
@@ -431,7 +440,9 @@ function combineMassSpecData_Organics(;beingselective = false)
 	# mRes_BrCUCIMS_selected.Traces = mRes_BrCUCIMS_selected.Traces .*0	# traces # !!! take care zeros!!!
 	println("loaded $(length(mRes_BrCUCIMS_selected.MasslistMasses)) traces from BrCUCIMS")
 
-	println("filtering PTR3 data masses that we're using from the other mass specs.")
+	#= 
+	filter PTR3 data masses that we're using from the other mass specs
+		println("filtering PTR3 data masses that we're using from the other mass specs.")
 		# from PTR3 we're keeping most monomers, except very few that we take from Br-CUCIMS (see below) and LTOF for O>=6 when available
 		PTR3indices2keep = [36,45,48,87,130,151,157,167]
 		# PTR3indices2keep covers the following species: 
@@ -457,7 +468,7 @@ function combineMassSpecData_Organics(;beingselective = false)
 			end
 		end
 		sort!(PTR3indices2keep)
-
+	
 	mRes_PTR3_selected = TOFTracer2.ResultFileFunctions.MeasurementResult(
 		mRes.Times, # times
 		MasslistFunctions.massFromCompositionArrayList(PTR3_compositions_organics[:,PTR3indices2keep];elements=elementlist) .- 
@@ -468,7 +479,9 @@ function combineMassSpecData_Organics(;beingselective = false)
 		mRes.Traces[:,PTR3indices2keep].*2.47e7
 		)
 	println("loaded $(length(mRes_PTR3_selected.MasslistMasses)) traces from PTR3")
-		
+	=#
+
+
 	mRes_BrMION_selected = TOFTracer2.ResultFileFunctions.MeasurementResult(
 		mRes.Times, # times
 		MasslistFunctions.massFromCompositionArrayList(comps_BrMION;elements=elementlist), # masses
@@ -506,7 +519,7 @@ function combineMassSpecData_Organics(;beingselective = false)
 	=#
 		
 	println("combining the mass spec data.")
-	mRes_BrCUCIMS_PTR3, resultLabelling = ResultFileFunctions.joinResultsMasses!(mRes_BrCUCIMS_selected,mRes_PTR3_selected; returnLabeling=true,firstResultLabeling=(zeros(length(mRes_BrCUCIMS_selected.MasslistMasses))),resultN=1)
+	mRes_BrCUCIMS_PTR3, resultLabelling = ResultFileFunctions.joinResultsMasses!(mRes_BrCUCIMS_selected,mRes; returnLabeling=true,firstResultLabeling=(zeros(length(mRes_BrCUCIMS_selected.MasslistMasses))),resultN=1)
 	mRes_BrCUCIMS_PTR3_LTOF, resultLabelling = ResultFileFunctions.joinResultsMasses!(mRes_BrCUCIMS_PTR3,mRes_LTOF_selected; returnLabeling=true,firstResultLabeling=resultLabelling,resultN=2)
 	println("    combined the data from BrCUCIMS, PTR3, and LTOF.")
 	
@@ -609,16 +622,16 @@ end
 # MAIN #
 ########
 
-if loadAllData
-	println("load data...")
-	data_HOx_smoothed = loadHOxData()
-	data_J17 = loadJ17Data()
-	data_NO, data_NO2 = loadNOxData()
-	data_O3_smoothed = loadO3data()
-	mRes_Nonanal_final, mResNonanal_PTR3, Nonanal_STOF, Nonanal_Fusion = loadNonanalData()
+if loadAllDataFromScratch
+	println("load data from $(fp)...")
+	data_HOx_smoothed = loadHOxData(fp)
+	data_J17 = loadJ17Data(fp)
+	data_NO, data_NO2 = loadNOxData(fp)
+	data_O3_smoothed = loadO3data(fp)
+	mRes_Nonanal_final, mResNonanal_PTR3, Nonanal_STOF, Nonanal_Fusion = loadNonanalData(fp)
 
 	if getdataFromCombinedFile
-		LTOF_compositions_organics, LTOF_times, LTOF_traces_organics, LTOFindices2keep, LTOF_SA = loadLTOFData() # data from Nitrate CIMS. only required is LTOF_SA?
+		LTOF_compositions_organics, LTOF_times, LTOF_traces_organics, LTOFindices2keep, LTOF_SA = loadLTOFData(fp) # data from Nitrate CIMS. only required is LTOF_SA?
 		datafp = "/home/wiebke/Documents/UIBK/CLOUD/CLOUD16/data/combinedMassSpecs/"
 		fptraces = "$(datafp)ptr3traces_combinedData_checked_zerocorrected.csv"
 		fpcompositions = "$(datafp)ptr3compositions_combinedData_checked_zerocorrected.txt"
@@ -707,7 +720,7 @@ if loadAllData
 		instrument = instrument[Not(idx2delete)]
 		zerocorrectedTraces = zerocorrectedTraces[:,Not(idx2delete)]
 		
-		TOFTracer2.ExportFunctions.exportTracesCSV_CLOUD("/home/wiebke/Documents/UIBK/CLOUD/CLOUD16/data/combinedMassSpecs/", 
+		TOFTracer2.ExportFunctions.exportTracesCSV_CLOUD(joinpath(fp, "combinedMassSpecs"), 
 															mRes_BrCUCIMS_PTR3_LTOF_BrMION.MasslistElements, 
 															mRes_BrCUCIMS_PTR3_LTOF_BrMION.MasslistMasses, 
 															mRes_BrCUCIMS_PTR3_LTOF_BrMION.MasslistCompositions, 
@@ -718,6 +731,7 @@ if loadAllData
 																		title = "Nonanal oxidation products - combined Data of 4 Mass Spectrometers", level=2,version="01",authorname_mail="Scholz, Wiebke wiebke.scholz@uibk.ac.at", units="cm⁻³",
 					addcomment="these data are a combination of 4 mass spectrometers (0: Br-CUCIMS, 1: NH4+PTR3, 2: NO3-LTOF, 3: BrMION). \nThe raw data were first processed by Yandong Tong (Br-CUCIMS), Wiebke Scholz (NH4+PTR3), Lucía Caudillo (NO3-LTOF), and Jiali Shen (BrMION).\n", threshold=1, nrrows_addcomment = 2), 
 															ion = "", average=0,
-															filenameAddition="_combinedData_checked")
+															filenameAddition="_combinedData_checked_15s")
 	end
+elseif loadAlreadyCombinedData
 end

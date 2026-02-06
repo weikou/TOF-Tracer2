@@ -1,15 +1,16 @@
 # loading Data from the Nonanal Experiments
 include("./dependencies_and_filepaths_Nonanal.jl")
 
-loadAllData = true
+loadAllDataFromScratch = true
 getdataFromCombinedFile = false
-exportCombinedTraces = false
+exportCombinedTraces = true
 beingSelective = false
 getstageAverages = false
 include("./functions_loadAllData_NonanalExperiments.jl")
 include("./NonanalRuns_loadRunplanData_defineFilters.jl")
 #include("./rcParams.jl")
 
+#=
 plottingVolatilitiesRO2 = false
 
 ULVOCfilter = CalF.log10C_T_CHONS(mRes_BrCUCIMS_PTR3_LTOF_BrMION.MasslistCompositions, 273.15-15; elementList = elementlist, correctIonInComposition=false) .<= -8.3
@@ -1003,5 +1004,8 @@ CSV.write("$(savefp)HNO3",HNO3constrained)
 CSV.write("$(savefp)HO2NO2",HO2NO2constrained) 
 CSV.write("$(savefp)SO2",SO2constrained) 
 CSV.write("$(savefp)H2O2",H2O2constrained) 
+
+=#
+
 
 =#

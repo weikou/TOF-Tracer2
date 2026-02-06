@@ -2,10 +2,10 @@
 # load runplan data and define filters
 ########################################################################################################
 
-fp = "/home/wiebke/Documents/UIBK/CLOUD/CLOUD16/data/"
+fp = raw"C:\Users\c7441225\Documents\UIBK\CLOUD\CLOUD16\data"
 
-runplanfile = "$(fp)runplan_Surfactants_CLOUD16_forEasierAnalysis_2.csv"
-safefp = "$(fp)figures/"
+runplanfile = joinpath(fp, "runplan_Surfactants_CLOUD16_forEasierAnalysis_2.csv")
+safefp = joinpath(fp, "figures/")
 runplan = DataFrame(CSV.File(runplanfile, header = 3))
 
 LS1only =  (runplan[!,"LS1"] .> 0) .& (runplan[!,"UVH [%] "] .== 0) .& (runplan[!,"LS3\n[V]"] .== 0)
@@ -20,5 +20,6 @@ lowT = runplan[!,"T [°C]"] .== -15
 highT = runplan[!,"T [°C]"] .== 10
 fans12 = runplan[!,"Fans (dd) [%]"] .== 12
 dark = (UVHonONLY + LS1on + LS3on .== 0)
+light = (UVHonONLY + LS1on + LS3on .> 0)
 
 

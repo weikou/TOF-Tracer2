@@ -15,7 +15,11 @@ startSurfactantRuns = DateTime(2023,10,24,7)
 endSurfactantRuns = DateTime(2023,11,3,14)
 
 # fp="/media/wiebke/Extreme SSD/CLOUD16/Surfactants_dataFromOthers/"
-fp = "/home/wiebke/Documents/UIBK/CLOUD/CLOUD16/data/"
-runplanfile = "$(fp)runplan_Surfactants_CLOUD16_forEasierAnalysis.csv"
+fp = raw"C:\Users\c7441225\Documents\UIBK\CLOUD\CLOUD16\data"
+runplanfile = joinpath(fp,"runplan_Surfactants_CLOUD16_forEasierAnalysis.csv")
 runplan = DataFrame(CSV.File(runplanfile, header = 3))
-savefp = "$(fp)/figures/"
+savefp = joinpath(fp, "figures/")
+
+
+loadAllDataFromScratch = false
+loadAlreadyCombinedData = true
