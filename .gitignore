@@ -1,5 +1,11 @@
 *.cov
 *.info
+.CondaPkg/
+test/.CondaPkg/
 ExampleFiles/TOFDATA/results/
 ExampleFiles/APiTOFDATA/results/
 docs/build/
+TODO.txt
+coverage_summary.txt
+pullRequest_V1_July2024
+config.ini
