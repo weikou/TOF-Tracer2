@@ -4,7 +4,7 @@ module BaselineFunctions
 
 	export calculateBaseline
 
-	"""
+"""
     calculateBaseline(massAxis, avgSpectrum; baselinePointWidth = 0.3, threshold = 0.2)
 
 Estimate the spectral baseline and noise level from a given averaged spectrum.
@@ -34,6 +34,7 @@ If the computed baseline value is unusually large (> 10,000) or equal to zero, a
 massAxis = 100:0.01:200
 avgSpectrum = rand(length(massAxis)) .* exp.(-(massAxis .- 150).^2 ./ 10)
 baselinePoints, baselineValues, baselineNoise = calculateBaseline(massAxis, avgSpectrum)
+```
 """
 function calculateBaseline(massAxis, avgSpectrum; baselinePointWidth = 0.3, baselineThreshold=0.2)
 

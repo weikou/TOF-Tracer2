@@ -186,80 +186,108 @@ CLOUD_greenSTD_masses = Dict(
 
 # brown STD - STD2 (2022/2023)
 CLOUD_brownSTD_masses = Dict(
-	"Acetonitrile" => ([MasslistFunctions.massFromComposition(C=2, H=3, N=1),
-				MasslistFunctions.massFromComposition(C=2, H=6, N=2),
-				MasslistFunctions.massFromComposition(C=2, H=9, N=3),
-				MasslistFunctions.massFromComposition(C=2, H=5, N=1, O=1)
+	"Acetonitrile" => ([
+				MasslistFunctions.massFromComposition(C=2, H=3, N=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=2, H=3, N=1), # H+
+				MasslistFunctions.massFromComposition(C=2, H=6, N=2), # NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=9, N=3), # NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=5, N=1, O=1), # H2O.H+
+				MasslistFunctions.massFromComposition(C=2, H=8, N=2, O=1) # H2O.NH3.H+
 				],1000),
-	"Acetaldehyde" => ([MasslistFunctions.massFromComposition(C=2, H=4, O=1),
-				MasslistFunctions.massFromComposition(C=2, H=7, N=1, O=1),
-				MasslistFunctions.massFromComposition(C=2, H=10, N=2, O=1),
-				MasslistFunctions.massFromComposition(C=2, H=9, N=1, O=2)
+	"Acetaldehyde" => ([MasslistFunctions.massFromComposition(C=2, H=4, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=2, H=4, O=1), #H+
+				MasslistFunctions.massFromComposition(C=2, H=6, O=2), #H2O.H+
+				MasslistFunctions.massFromComposition(C=2, H=7, N=1, O=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=10, N=2, O=1),	 #NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=9, N=1, O=2)	#H2O.NH3.H+
 				],1000),
-	"Acetic Acid" => ([MasslistFunctions.massFromComposition(C=2, H=4, O=2),
-				MasslistFunctions.massFromComposition(C=2, H=7, N=1, O=2),
-				MasslistFunctions.massFromComposition(C=2, H=6, O=3),
-				MasslistFunctions.massFromComposition(C=2, H=10, N=2, O=2),
-				MasslistFunctions.massFromComposition(C=2, H=9, N=1, O=3)
+	"Acetic Acid" => ([MasslistFunctions.massFromComposition(C=2, H=3, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=2, H=4, O=2, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=2, H=4, O=2), #H+
+				MasslistFunctions.massFromComposition(C=2, H=7, N=1, O=2), #NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=6, O=3), #H2O.H+
+				MasslistFunctions.massFromComposition(C=2, H=10, N=2, O=2), #NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=9, N=1, O=3) #H2O.NH3.H+
 				],1000),
-	"Acetone" => ([MasslistFunctions.massFromComposition(C=3, H=6, O=1),
-				MasslistFunctions.massFromComposition(C=3, H=9, O=1, N=1),
-				MasslistFunctions.massFromComposition(C=3, H=8, O=2),
-				MasslistFunctions.massFromComposition(C=3, H=12, O=1, N=2),
-				MasslistFunctions.massFromComposition(C=3, H=11, O=2, N=1)
+	"Acetone" => ([MasslistFunctions.massFromComposition(C=2, H=3, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=3, H=6, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=3, H=6, O=1), #H+
+				MasslistFunctions.massFromComposition(C=3, H=9, O=1, N=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=3, H=8, O=2),	 #H2O.H+
+				MasslistFunctions.massFromComposition(C=3, H=12, O=1, N=2),	 #NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=3, H=11, O=2, N=1) #H2O.NH3.H+
 				],1000),
-	"DMS" => ([MasslistFunctions.massFromComposition(C=2, H=6, S=1),
-				MasslistFunctions.massFromComposition(C=2, H=9, N=1, S=1),
-				MasslistFunctions.massFromComposition(C=2, H=11, N=1, S=1, O=1),
-				MasslistFunctions.massFromComposition(C=2, H=12, N=2, S=1)
+	"DMS" => ([MasslistFunctions.massFromComposition(C=1, H=2, S=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=1, H=3, S=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=2, H=6, S=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=2, H=6, S=1),	 #H+
+				MasslistFunctions.massFromComposition(C=2, H=9, N=1, S=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=11, N=1, S=1, O=1), #H2O.NH3.H+
+				MasslistFunctions.massFromComposition(C=2, H=12, N=2, S=1) #NH3.NH3.H+
 				],1000),
-	"MVK" => ([MasslistFunctions.massFromComposition(C=4, H=6, O=1),
-			  	MasslistFunctions.massFromComposition(C=4, H=9, O=1, N=1),
-			  	MasslistFunctions.massFromComposition(C=4, H=8, O=2),
-			  	MasslistFunctions.massFromComposition(C=4, H=12, O=1, N=2),
-			  	MasslistFunctions.massFromComposition(C=4, H=11, O=2, N=1)
+	"MVK" => ([MasslistFunctions.massFromComposition(C=2, H=3, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=3, H=3, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=4, H=6, O=1), #H+
+			  	MasslistFunctions.massFromComposition(C=4, H=9, O=1, N=1), #NH3.H+
+			  	MasslistFunctions.massFromComposition(C=4, H=8, O=2), #H2O.H+
+			  	MasslistFunctions.massFromComposition(C=4, H=12, O=1, N=2), #NH3.NH3.H+
+			  	MasslistFunctions.massFromComposition(C=4, H=11, O=2, N=1) #H2O.NH3.H+
 			  	],1000),
-	"Hexenal" => ([MasslistFunctions.massFromComposition(C=6, H=10, O=1),
-				MasslistFunctions.massFromComposition(C=6, H=13, O=1, N=1),
-				MasslistFunctions.massFromComposition(C=6, H=12, O=2),
-				MasslistFunctions.massFromComposition(C=6, H=16, O=1, N=2),
-				MasslistFunctions.massFromComposition(C=6, H=15, O=2, N=1)
+	"Hexenal" => ([MasslistFunctions.massFromComposition(C=2, H=3, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=5, H=8), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=6, H=10, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=5, H=6, O=1),#O2+ fragment
+				MasslistFunctions.massFromComposition(C=6, H=10, O=1), #H+
+				MasslistFunctions.massFromComposition(C=6, H=13, O=1, N=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=6, H=12, O=2), #H2O.H+
+				MasslistFunctions.massFromComposition(C=6, H=16, O=1, N=2), #NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=6, H=15, O=2, N=1) #H2O.NH3.H+
 				],1000),
-	"Hexanone" => ([MasslistFunctions.massFromComposition(C=6, H=12, O=1),
-				MasslistFunctions.massFromComposition(C=6, H=15, O=1, N=1),
-				MasslistFunctions.massFromComposition(C=6, H=14, O=2),
-				MasslistFunctions.massFromComposition(C=6, H=17, O=2, N=1)
+	"Hexanone" => ([
+				MasslistFunctions.massFromComposition(C=6, H=12, O=1, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=6, H=12, O=1), #H+
+				MasslistFunctions.massFromComposition(C=6, H=15, O=1, N=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=6, H=14, O=2), #H2O.H+
+				MasslistFunctions.massFromComposition(C=6, H=17, O=2, N=1), #H2O.NH3.H+
+				MasslistFunctions.massFromComposition(C=6, H=18, O=1, N=2) #NH3.NH3.H+
 				],1000),
-	"Octanone" => ([MasslistFunctions.massFromComposition(C=8, H=16, O=1),
-				MasslistFunctions.massFromComposition(C=8, H=19, O=1, N=1),
-				MasslistFunctions.massFromComposition(C=8, H=18, O=2),
-				MasslistFunctions.massFromComposition(C=8, H=22, O=1, N=2),
-				MasslistFunctions.massFromComposition(C=8, H=21, O=2, N=1)
+	"Octanone" => ([MasslistFunctions.massFromComposition(C=8, H=16, O=1, Hplus=0), # O2+ fragment
+				MasslistFunctions.massFromComposition(C=8, H=16, O=1), # H+
+				MasslistFunctions.massFromComposition(C=8, H=19, O=1, N=1), # NH3.H+
+				MasslistFunctions.massFromComposition(C=8, H=18, O=2), # H2O.H+
+				MasslistFunctions.massFromComposition(C=8, H=22, O=1, N=2), # NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=8, H=21, O=2, N=1) # H2O.NH3.H+
 				],1000),
-	"Apinene" => ([MasslistFunctions.massFromComposition(C=10, H=16),
-				MasslistFunctions.massFromComposition(C=10, H=19, N=1),
-				MasslistFunctions.massFromComposition(C=10, H=18, O=1),
-				MasslistFunctions.massFromComposition(C=10, H=22, N=2),
-				MasslistFunctions.massFromComposition(C=10, H=21, N=1, O=1)
+	"Apinene" => ([MasslistFunctions.massFromComposition(C=7, H=8, Hplus=0), # O2+ fragment
+				MasslistFunctions.massFromComposition(C=7, H=8), # O2+ fragment
+				MasslistFunctions.massFromComposition(C=6, H=8), # H3O+ fragment
+				MasslistFunctions.massFromComposition(C=10, H=16), #H+
+				MasslistFunctions.massFromComposition(C=10, H=19, N=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=10, H=18, O=1), #H2O.H+
+				MasslistFunctions.massFromComposition(C=10, H=22, N=2), #NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=10, H=21, N=1, O=1) #H2O.NH3.H+
 				],750),
-	"Benzene" => ([MasslistFunctions.massFromComposition(C=6, H=6),
-				MasslistFunctions.massFromComposition(C=6, H=9, N=1),
-				MasslistFunctions.massFromComposition(C=6, H=8, O=1),
-				MasslistFunctions.massFromComposition(C=6, H=12, N=2),
-				MasslistFunctions.massFromComposition(C=6, H=11, N=1, O=1)
+	"Benzene" => ([MasslistFunctions.massFromComposition(C=6, H=6, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=6, H=6), #H+
+				MasslistFunctions.massFromComposition(C=6, H=9, N=1), #NH3.H+
+				MasslistFunctions.massFromComposition(C=6, H=8, O=1), #H2O.H+
+				MasslistFunctions.massFromComposition(C=6, H=12, N=2), #NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=6, H=11, N=1, O=1) #H2O.NH3.H+
 			],1000),
-	"Toluene" => ([MasslistFunctions.massFromComposition(C=7, H=8),
-				MasslistFunctions.massFromComposition(C=7, H=11, N=1),
-				MasslistFunctions.massFromComposition(C=7, H=10, O=1),
-				MasslistFunctions.massFromComposition(C=7, H=14, N=2),
-				MasslistFunctions.massFromComposition(C=7, H=13, N=1, O=1)
+	"Toluene" => ([MasslistFunctions.massFromComposition(C=7, H=8, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=7, H=8), # H+
+				MasslistFunctions.massFromComposition(C=7, H=11, N=1), # NH3.H+
+				MasslistFunctions.massFromComposition(C=7, H=10, O=1), # H2O.H+
+				MasslistFunctions.massFromComposition(C=7, H=14, N=2), # NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=7, H=13, N=1, O=1) # H2O.NH3.H+
 			],1000),
-	"Xylene" => ([MasslistFunctions.massFromComposition(C=8, H=10),
-				MasslistFunctions.massFromComposition(C=8, H=13, N=1),
-				MasslistFunctions.massFromComposition(C=8, H=12, O=1),
-				MasslistFunctions.massFromComposition(C=8, H=16, N=2),
-				MasslistFunctions.massFromComposition(C=8, H=15, N=1, O=1)
+	"Xylene" => ([MasslistFunctions.massFromComposition(C=8, H=10, Hplus=0), #O2+ fragment
+				MasslistFunctions.massFromComposition(C=8, H=10), # H+
+				MasslistFunctions.massFromComposition(C=8, H=13, N=1), # NH3.H+
+				MasslistFunctions.massFromComposition(C=8, H=12, O=1), # H2O.H+
+				MasslistFunctions.massFromComposition(C=8, H=16, N=2), # NH3.NH3.H+
+				MasslistFunctions.massFromComposition(C=8, H=15, N=1, O=1) # H2O.NH3.H+
 			],1000)
-)
+			)
 
 end
