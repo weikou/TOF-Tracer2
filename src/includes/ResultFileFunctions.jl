@@ -36,6 +36,7 @@ module ResultFileFunctions
         mres.MasslistCompositions, 
         mres.Traces)
 	
+
     """
         joinResultsTime!(firstResult::MeasurementResult, secondResult::MeasurementResult)
         
@@ -45,16 +46,20 @@ module ResultFileFunctions
     """
 	function joinResultsTime!(firstResult::MeasurementResult, secondResult::MeasurementResult; tol=1e-5)
 	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
-            if length(findall(((firstResult.MasslistMasses .- secondResult.MasslistMasses) .< tol) .== 0)) .== 0
-				if (length(findall(firstResult.MasslistCompositions .- secondResult.MasslistCompositions .> 0)) == 0)
-					firstResult.Times = vcat(firstResult.Times, secondResult.Times)
-					# firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
-					firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
-					return firstResult
-				else 
-					@warn "MasslistCompositions did not match, could not merge results!"
+			try 
+				if length(findall(((firstResult.MasslistMasses .- secondResult.MasslistMasses) .< tol) .== 0)) == 0
+					try 
+						if (length(findall(firstResult.MasslistCompositions .- secondResult.MasslistCompositions .> 0)) == 0)
+							firstResult.Times = vcat(firstResult.Times, secondResult.Times)
+							# firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
+							firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
+							return firstResult
+						end
+					catch 
+						@warn "MasslistCompositions did not match, could not merge results!"
+					end
 				end
-            else
+			catch
                 @warn "Masses did not match, could not merge results!"
             end
 	    end
@@ -103,11 +108,17 @@ module ResultFileFunctions
                 labelArray = vcat(firstResultLabeling,resultN*ones(length(firstResult.MasslistMasses)))
                 firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
                 firstResult.Traces = hcat(firstResult.Traces, secondResult.Traces)
+				# sort by mass
                 sorter = sortperm(firstResult.MasslistMasses)
                 firstResult.MasslistMasses = firstResult.MasslistMasses[sorter]
                 labelArray = labelArray[sorter]
                 firstResult.MasslistCompositions = firstResult.MasslistCompositions[:,sorter]
                 firstResult.Traces = firstResult.Traces[:,sorter]
+				# remove duplicates
+				firstResult.MasslistCompositions = firstResult.MasslistCompositions[:,MasslistFunctions.uniqueIndices(firstResult.MasslistMasses)]
+				firstResult.Traces = firstResult.Traces[:,MasslistFunctions.uniqueIndices(firstResult.MasslistMasses)]
+                labelArray = labelArray[MasslistFunctions.uniqueIndices(firstResult.MasslistMasses)]
+				firstResult.MasslistMasses = firstResult.MasslistMasses[MasslistFunctions.uniqueIndices(firstResult.MasslistMasses)]
                 if returnLabeling
                     return firstResult,labelArray
                 else

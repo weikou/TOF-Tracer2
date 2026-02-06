@@ -7,7 +7,7 @@
     
     import TOFTracer2.ResultFileFunctions as ResFF
     
-    resfile = joinpath("..","ExampleFiles","TOFDATA","results","_result.hdf5")
+    resfile = joinpath(@__DIR__,"..","..","ExampleFiles","TOFDATA","results","_result.hdf5")
     @test nbrTraces = isa(ResFF.getNbrTraces(resfile),Int)
     @test nbrSamples = isa(ResFF.getNbrTraceSamples(resfile),Int)
     
@@ -35,11 +35,15 @@
         mResB = ResFF.loadResults(resfile; useAveragesOnly = true, massesToLoad=[19.0184,59.0497,153.128],massMatchTolerance = 0.001)
         
         mResA, labels = ResFF.joinResultsMasses!(mResA, mResB;returnLabeling=true,resultN=1)
-        @test size(mResA.Traces) == (origtimeslength_mResA,origmasslistlength_mResA + length(mResB.MasslistMasses))
+        @test size(mResA.Traces)[1] == origtimeslength_mResA
+        @test size(mResA.Traces)[2] <= origmasslistlength_mResA + length(mResB.MasslistMasses)
 	    @test all(mResA.MasslistMasses[2:end].-mResA.MasslistMasses[1:end-1] .>= 0)
-	    @test mResA.MasslistMasses[labels .== 1.0] == mResB.MasslistMasses
-        @test_logs (:warn,"Masses did not match, could not merge results!") ResFF.joinResultsTime(mResA, mResB)
-        @test length(mResA.MasslistMasses) == origmasslistlength_mResA + length(mResB.MasslistMasses)
+	    @test issubset(mResA.MasslistMasses[labels .== 1.0], mResB.MasslistMasses)
+        @test_logs (:warn,"Masses did not match, could not merge results!") ResFF.joinResultsTime!(mResA, mResB)
+        @test issubset(mResB.MasslistMasses,mResA.MasslistMasses)
+        @test length(mResA.MasslistMasses) == size(mResA.MasslistCompositions)[2]
+        @test length(mResA.MasslistMasses) == size(mResA.Traces)[2]
+        @test length(mResA.MasslistMasses) == length(labels)
 	end
 	
 	@testset "getIndicesInTimeframe" begin

@@ -400,7 +400,7 @@ module PlotFunctions
 			savefig(savefigname*".pdf")
 		end
 
-		return fig,ax,legStrings,measResult
+		return fig,ax,legStrings,measResult 
 	end
 
 
@@ -462,9 +462,10 @@ module PlotFunctions
 							     	 startTime=timeFrame2plot[1],
 							     	 endTime=timeFrame2plot[2])
 		  measResult=ResultFileFunctions.joinResultsMasses!(measResult, isobarResult)
+		  massesToPlot = measResult.MasslistMasses
 		end
 
-		fig,ax,legStrings, mResPlotted = plotTraces(measResult,massesToPlot;
+		fig,ax,legStrings,mResPlotted = plotTraces(measResult,massesToPlot;
 			    smoothing = smoothing,
 			    backgroundSubstractionMode = backgroundSubstractionMode,
 			    bg = bg,
@@ -484,7 +485,7 @@ module PlotFunctions
 							     startTime=timeFrame2plot[1],
 							     endTime=timeFrame2plot[2])
 		end	
-		return measResult,fig,ax,legStrings, mResPlotted
+		return fig,ax,legStrings,measResult 
 	end
 
 
@@ -545,9 +546,8 @@ module PlotFunctions
 				savefigname = savefigname, 
 				title=title
 				)
-				
 
-		return fullmeasResultfig,ax,legStrings,mResPlotted
+		return fig,ax,legStrings,mResPlotted
 	end
 
 
@@ -629,7 +629,7 @@ module PlotFunctions
 			end
 		end
 		legend(legStrings)
-		return fig,ax
+		return fig,ax,legStrings
 	end
 
 
@@ -764,7 +764,7 @@ module PlotFunctions
         end
         if axes !== NaN
 		    text.(stagestimes .+ Dates.Minute(3),
-		            axes.get_ylim()[0]*textoffset,
+		            axes.get_ylim()[1]*textoffset,
 		            strings2display,
 		            rotation=90,fontsize=fontsize)
 		end

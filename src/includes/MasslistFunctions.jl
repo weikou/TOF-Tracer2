@@ -165,7 +165,42 @@ module MasslistFunctions
 	  sortIndices = sortperm(masses)
 	  return masses[sortIndices],masslistElements,masslistElementMasses, masslistCompositions[sortIndices]
 	end
-    
+
+	"""
+		uniqueIndices(x)
+
+	returns the indices to apply to a 1D-array x to give a unique final array. E.g. 
+	
+	```
+	julia> x = [1,1,7,8,7]
+	julia> uniqueIndices(x)
+	3-element Vector{Int64}:
+	1
+	3
+	4
+	julia> x[uniqueIndices(x)]
+	3-element Vector{Int64}:
+	1
+	7
+	8
+	julia> unique(x) == x[uniqueIndices(x)]
+	true
+	```
+	"""
+	uniqueIndices(x) = unique(i -> x[i], 1:length(x))
+
+
+	"""
+		removeMasslistDuplicates()
+
+	"""
+    function removeMasslistDuplicates(measResult)
+				measResult.MasslistCompositions = measResult.MasslistCompositions[:,uniqueIndices(measResult.MasslistMasses)]
+				measResult.Traces = measResult.Traces[:,uniqueIndices(measResult.MasslistMasses)]
+				measResult.MasslistMasses = measResult.MasslistMasses[uniqueIndices(measResult.MasslistMasses)]
+				return measResult
+	end
+
     """
         loadMasslist(filename)
     
@@ -206,7 +241,10 @@ module MasslistFunctions
 		    end
 	      end
 	      sortIndices = sortperm(masses)
-	      return masses[sortIndices],masslistElements, masslistElementMasses, masslistCompositions[sortIndices]
+		  println("Removing duplicates.")
+		  unique_indices = uniqueIndices(masses[sortIndices])
+		  
+	      return masses[sortIndices][unique_indices],masslistElements, masslistElementMasses, masslistCompositions[sortIndices][unique_indices]
 	  end
 	end
 

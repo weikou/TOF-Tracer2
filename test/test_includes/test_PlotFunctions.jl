@@ -76,25 +76,27 @@ import TOFTracer2.ResultFileFunctions as ResFF
         massLibrary.APINENE_nh4[1]
     ]
 
-	tracesFig, tracesAx, mRes = PlotFunctions.plotTracesFromHDF5(resfile, massesToPlot;
+	tracesFig, tracesAx, legStrings, mRes = PlotFunctions.plotTracesFromHDF5(resfile, massesToPlot;
 		plotHighTimeRes=true,
 		smoothing=0,
 		backgroundSubstractionMode=0,
 		bg=(DateTime(0), DateTime(3000)),
 		timedelay=Dates.Hour(0), 
-		isobarToPlot=0,
+		isobarToPlot=117,
 		plotsymbol=".",
 		timeFrame2plot=(DateTime(0), DateTime(3000)),
-		plotFittedInsteadOfSummed = true,
 		ion = "NH3.H+"
 		)
 	    
     @test isa(tracesFig,Figure)
     @test isa(tracesAx,PyCall.PyObject)
     @test isa(mRes,TOFTracer2.ResultFileFunctions.MeasurementResult)
+    @test isa(legStrings,Vector{Any})
+    @test length(legStrings) == length(mRes.MasslistMasses)
+
     
     @testset "plotStages" begin
-        runtablefile = joinpath("..","ExampleFiles","TOFDATA","runtable.txt")
+        runtablefile = joinpath(@__DIR__,"..","..","ExampleFiles","TOFDATA","runtable.txt")
         stagesdatf = plotF.plotStages(runtablefile; axes = tracesAx, CLOUDruntable = true, headerrow = 1,fontsize=10)
         @test isa(stagesdatf,DataFrame)
         @test "times" in names(stagesdatf)
@@ -114,13 +116,12 @@ import TOFTracer2.ResultFileFunctions as ResFF
     @testset "plotTracesFromExportedCSV" begin
         tracesfile = joinpath(fp,"export1","ptr3traces_CLOUDheader.csv")
         compositionfile = joinpath(fp,"export1","ptr3compositions_CLOUDheader.txt")
-        fig,ax,measResult,legStrings = plotF.plotTracesFromExportedCSV(tracesfile, compositionfile, massesToPlot;
+        fig,ax,legStrings,measResult = plotF.plotTracesFromExportedCSV(tracesfile, compositionfile, massesToPlot;
 			smoothing = 1,
 			backgroundSubstractionMode = 0,
 			bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
 			isobarToPlot = 0,
 			plotsymbol = ".-",
-			plotFittedInsteadOfSummed = true,
 			timeFrame2plot=(DateTime(0),DateTime(3000)),
 			timezone = "UTC",
 			signalunit = "CPS",
@@ -151,9 +152,10 @@ import TOFTracer2.ResultFileFunctions as ResFF
         xdata = [1,2,3,4,5]
         ydata = [10 100 1000 2000;5 50 500 1000;3 30 300 600;2 20 200 400; 1.5 15 150 300]
         ydataerr = ydata .* 0.1
-        fig2, ax2 = plotF.scatter_errorbar(PyPlot.figure(),mResDryCalibs,xdata,ydata,ydataerr;ion="H+")
+        fig2, ax2, legStrings = plotF.scatter_errorbar(PyPlot.figure(),mResDryCalibs,xdata,ydata,ydataerr;ion="H+")
         @test isa(fig2,Figure)
         @test isa(ax2,PyCall.PyObject)
+        @test isa(legStrings, Vector{Any})
     end
     
     @testset "load_plotLicorData" begin
