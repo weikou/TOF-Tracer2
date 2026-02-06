@@ -5,7 +5,7 @@ module ResultFileFunctions
 	import  ..MasslistFunctions
 	import ..InterpolationFunctions
 
-	export MeasurementResult, copyResult, joinResultsTime, joinResultsMasses, getTraces, getTimetraces, transposeStickCps, getNbrTraces, getTraceSamples, getNbrTraceSamples, findChangingMasses, findVaryingMasses, saturationFromComposition, getIndicesInTimeframe
+	export MeasurementResult, copyResult, joinResultsTime, joinResultsMasses!, getTraces, getTimetraces, transposeStickCps, getNbrTraces, getTraceSamples, getNbrTraceSamples, findChangingMasses, findVaryingMasses, saturationFromComposition, getIndicesInTimeframe
 
 	#type MeasurementResult
 	"""
@@ -43,13 +43,17 @@ module ResultFileFunctions
     
     Note, that this is only possible, when they have the same Masslist.
     """
-	function joinResultsTime!(firstResult::MeasurementResult, secondResult::MeasurementResult)
+	function joinResultsTime!(firstResult::MeasurementResult, secondResult::MeasurementResult; tol=1e-5)
 	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
-            if (firstResult.MasslistMasses == secondResult.MasslistMasses)
-                firstResult.Times = vcat(firstResult.Times, secondResult.Times)
-                # firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
-                firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
-                return firstResult
+            if length(findall(((firstResult.MasslistMasses .- secondResult.MasslistMasses) .< tol) .== 0)) .== 0
+				if (length(findall(firstResult.MasslistCompositions .- secondResult.MasslistCompositions .> 0)) == 0)
+					firstResult.Times = vcat(firstResult.Times, secondResult.Times)
+					# firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
+					firstResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
+					return firstResult
+				else 
+					@warn "MasslistCompositions did not match, could not merge results!"
+				end
             else
                 @warn "Masses did not match, could not merge results!"
             end
@@ -63,14 +67,18 @@ module ResultFileFunctions
     
     Note, that this is only possible, when they have the same Masslist.
     """
-	function joinResultsTime(firstResult::MeasurementResult, secondResult::MeasurementResult)
+	function joinResultsTime(firstResult::MeasurementResult, secondResult::MeasurementResult; tol=1e-5)
 	    if (length(firstResult.Times) > 0) & (length(secondResult.Times) > 0)
-            if (firstResult.MasslistMasses == secondResult.MasslistMasses)
-                combinedResult = copyResult(firstResult)
-                combinedResult.Times = vcat(firstResult.Times, secondResult.Times)
-                # firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
-                combinedResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
-                return combinedResult
+            if length(findall(((firstResult.MasslistMasses .- secondResult.MasslistMasses) .< tol) .== 0)) .== 0
+				if (length(findall(firstResult.MasslistCompositions .- secondResult.MasslistCompositions .> 0)) == 0)
+					combinedResult = copyResult(firstResult)
+					combinedResult.Times = vcat(firstResult.Times, secondResult.Times)
+					# firstResult.MasslistCompositions = hcat(firstResult.MasslistCompositions, secondResult.MasslistCompositions)
+					combinedResult.Traces = vcat(firstResult.Traces, secondResult.Traces)
+					return combinedResult
+				else 
+					@warn "MasslistCompositions did not match, could not merge results!"
+				end
             else
                 @warn "Masses did not match, could not merge results!"
             end
@@ -171,6 +179,11 @@ module ResultFileFunctions
 	      end
 	  else
 	      selectionMassesIndices=1:length(masslistMasses)
+	  end
+
+	  duplicatesIndices = findall(abs.(masslistMasses[2:end] .- masslistMasses[1:end-1]) .== 0.0) .+ 1 # find duplicates
+	  if length(duplicatesIndices) > 0 # remove duplicatesIndices from selectionMassesIndices
+	    selectionMassesIndices = selectionMassesIndices[.!in.(selectionMassesIndices, Ref(duplicatesIndices))]
 	  end
 
 	  selectionTimeIndexStart = searchsortedfirst(timesUnix, Dates.datetime2unix(startTime))
@@ -482,9 +495,8 @@ module ResultFileFunctions
 	    sorter = sortperm(masses[selMasses], rev=false)
 	  else
 	      println("Not sorting.")
-	    sorter = LinearIndices(masses)
+	    sorter = LinearIndices(masses[selMasses])
 	  end
-
 	  return selIndices[sorter], means[selIndices[sorter]], stderror[selIndices[sorter]]
 	end
 

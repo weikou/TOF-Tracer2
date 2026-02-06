@@ -1,4 +1,5 @@
 module ImportFunctions
+using DataFrames: rows
 using DataFrames
 using Dates
 using CSV
@@ -51,5 +52,48 @@ function importExportedTraces(fptraces,fpcompositions;nrElements = 8)
     traces = Matrix(data[!,3:end])
 return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces)
 end
-    
+
+function importExportedTraces_compositionbasedSubset(fptraces,fpcompositions;nrElements = 8,compositionSubset = zeros(Int64,0, nrElements))
+    nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
+    compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines+1))
+    compositionSubsetfilter = Bool[]
+    for i in 1:size(compdata,1)
+        rowComp = Vector{Int64}(compdata[i,1:nrElements])
+        if rowComp in rows(compositionSubset)
+            push!(compositionSubsetfilter, true)
+        else
+            push!(compositionSubsetfilter, false)
+        end
+    end
+    compdata = compdata[compositionSubsetfilter, :]
+    subsetfilter = vcat([false,false], compositionSubsetfilter)
+    nrheaderlines = parse(Int64,split(readlines(fptraces)[1],"\t")[2])
+    data = DataFrame(CSV.File(fptraces, header = nrheaderlines+1))[:,subsetfilter]
+    times = data.Time
+    masslistMasses = values(compdata[!,"Mass"])
+    masslistElements = names(compdata)[1:nrElements]
+    masslistElementsMasses = [MasslistFunctions.elementsMassesDict[el] for el in masslistElements]
+    masslistCompositions = transpose(Matrix(compdata[!,1:nrElements]))
+    traces = Matrix(data[!,3:end])
+return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces)
+end
+
+function importExportedCompositions(fpcompositions;nrElements = 8)
+    nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
+    compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines+1))
+    masslistMasses = values(compdata[!,"Mass"])
+    masslistElements = names(compdata)[1:nrElements]
+    masslistElementsMasses = [MasslistFunctions.elementsMassesDict[el] for el in masslistElements]
+    masslistCompositions = transpose(Matrix(compdata[!,1:nrElements]))
+    traces = zeros(1, size(masslistMasses,1))
+    times = [DateTime(0,1,1)]
+    if length(names(compdata)) > nrElements + 2
+        println("There are more columns in the compositions file than expected. Additional columns are returned as a dataframe")
+        additionalColumns = compdata[:,(nrElements+3):end]
+    else
+        additionalColumns = DataFrame()
+    end
+return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces), additionalColumns
+end
+
 end
