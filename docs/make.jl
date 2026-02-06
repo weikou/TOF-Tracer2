@@ -8,11 +8,6 @@ DocMeta.setdocmeta!(TOFTracer2, :DocTestSetup, :(using TOFTracer2); recursive=tr
 
 makedocs(;
 	sitename = "TOFTracer2",
-	#root    = joinpath(@__DIR__,".."),
-    	#source  = "src",
-    	#build   = "build",
-    	#clean   = true,
-    	#doctest = true,
 	modules = Module[TOFTracer2,PlotFunctions]
 	)
 
