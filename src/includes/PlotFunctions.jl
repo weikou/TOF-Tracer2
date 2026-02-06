@@ -288,62 +288,72 @@ module PlotFunctions
 	end
 =#
 
+	""" 
+		plotTraces(measResult::ResultFileFunctions.MeasurementResult, massesToPlot=[]; kwargs ...)
+
+	plots time traces from a MeasurementResult struct.
+	
+	### kwargs standard settings:
+	- smoothing = 1,
+	- backgroundSubstractionMode = 0,
+	- bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+	- dutycyclecorrect = false,
+	- timedelay = Dates.Hour(0),
+	- plotsymbol = ".-",
+	- timezone = "UTC",
+	- signalunit = "CPS",
+	- ion = "all",
+	- subplotlayout = 111
+	- title = ""
 	"""
-	    plotTracesFromHDF5(file, massesToPlot; kwargs...)
+	function plotTraces(measResultOriginal::ResultFileFunctions.MeasurementResult,
+			massesToPlot=[]; # if massesToPlot is empty, all masses in measResult are plotted
+			deltaMassTolerance=0.01,
+		    smoothing = 1,
+		    backgroundSubstractionMode = 0,
+		    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+			dutycyclecorrect = false,
+		    timedelay = Dates.Hour(0),
+		    plotsymbol = ".-",
+		    timezone = "UTC",
+		    signalunit = "CPS",
+		    ion = "all",
+		    subplotlayout = 111,
+			isobarToPlot = 0,
+			timeFrame2plot = (DateTime(0),DateTime(3000)),
+			savefigname = "",
+			title = "")
 
-	expects a result file from TOFTracer2 processing (*.hdf5) and an array of masses to plot.
-
-	kwargs standard settings:
-	-------
-    plotHighTimeRes = false,
-    smoothing = 1,
-    backgroundSubstractionMode = 0,
-    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
-    timedelay = Dates.Hour(0),
-    isobarToPlot = 0,
-    plotsymbol = ".-",
-    plotFittedInsteadOfSummed = true,
-    timeFrame2plot=(DateTime(0),DateTime(3000)),
-    timezone = "UTC",
-    signalunit = "CPS",
-    ion = "all"
-
-	returns a figure and axis, showing the time traces of the given masses and loaded MeasurementResult struct.
-	Shows only file-averages without background correction and no smooting as default.
-	"""
-	function plotTracesFromHDF5(file, massesToPlot;
-			    plotHighTimeRes = false,
-			    smoothing = 1,
-			    backgroundSubstractionMode = 0,
-			    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
-			    timedelay = Dates.Hour(0),
-			    isobarToPlot = 0,
-			    plotsymbol = ".-",
-			    plotFittedInsteadOfSummed = true,
-			    timeFrame2plot=(DateTime(0),DateTime(3000)),
-			    timezone = "UTC",
-			    signalunit = "CPS",
-			    ion = "all",
-			    subplotlayout = 111
-			    )
-		measResult = ResultFileFunctions.loadResults(file,
-							     massesToLoad=massesToPlot,
-							     useAveragesOnly=!plotHighTimeRes,
-							     raw=!plotFittedInsteadOfSummed,
-							     massMatchTolerance=0.01,
-							     startTime=timeFrame2plot[1],
-							     endTime=timeFrame2plot[2])
+		measResult = deepcopy(measResultOriginal)
+		massloadidxs = []
+		isobarIdxs=[]
 		if isobarToPlot != 0
-		  isobarResult = ResultFileFunctions.loadResults(file,
-		  					         massesToLoad=[isobarToPlot+0.3],
-		  					         massMatchTolerance=0.5,
-		  					         useAveragesOnly=!plotHighTimeRes,
-		  					         raw=!plotFittedInsteadOfSummed,
-							     	 startTime=timeFrame2plot[1],
-							     	 endTime=timeFrame2plot[2])
-		  measResult=ResultFileFunctions.joinResultsMasses(measResult, isobarResult)
+		  isobarIdxs = findall(abs.(measResult.MasslistMasses .- isobarToPlot) .< 0.5)
+		  append!(massloadidxs, isobarIdxs)
+		end
+		if !isempty(massesToPlot)
+			for m in massesToPlot
+				idx = findfirst(abs.(measResult.MasslistMasses .- m) .< deltaMassTolerance)
+				if idx != nothing
+					push!(massloadidxs, idx)
+				else
+					println("Mass $(m) not found in MeasurementResult.MasslistMasses.")
+				end
+			end
+			unique!(sort!(massloadidxs))
+			measResult.MasslistMasses = measResult.MasslistMasses[massloadidxs]
+			measResult.MasslistCompositions = measResult.MasslistCompositions[:,massloadidxs]
+			measResult.Traces = measResult.Traces[:,massloadidxs]
 		end
 
+		if timeFrame2plot != (DateTime(0),DateTime(3000))
+			timefilter = (timeFrame2plot[1] .< measResult.Times) .& (measResult.Times .< timeFrame2plot[2])
+			measResult.Times = measResult.Times[timefilter]
+			measResult.Traces = measResult.Traces[timefilter,:]
+		end
+		if dutycyclecorrect
+			measResult.Traces = measResult.Traces .* transpose(sqrt.(100 ./ measResult.MasslistMasses))
+		end
 		measResult.Times = measResult.Times .- timedelay
 
 		if (backgroundSubstractionMode == 0)
@@ -361,7 +371,7 @@ module PlotFunctions
 		semilogy(Dates.unix2datetime.(InterpolationFunctions.averageSamples(Dates.datetime2unix.(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
 		startTimeString = Dates.format(measResult.Times[1],"yyyy/mm/dd")
 		endTimeString = Dates.format(measResult.Times[end],"yyyy/mm/dd")
-		title("$startTimeString - $endTimeString")
+		PyPlot.title(string("$startTimeString - $endTimeString", " ", title))
 		xlabel("Time ["*timezone*"]")
 		ylabel("Signal ["*signalunit*"]")
 
@@ -385,7 +395,96 @@ module PlotFunctions
 		grid()
 
 		tight_layout()
-		return fig,ax,measResult
+		if savefigname != ""
+			savefig(savefigname*".png")
+			savefig(savefigname*".pdf")
+		end
+
+		return fig,ax,legStrings,measResult
+	end
+
+
+	"""
+	    plotTracesFromHDF5(file, massesToPlot; kwargs...)
+
+	expects a result file from TOFTracer2 processing (*.hdf5) and an array of masses to plot.
+
+	kwargs standard settings:
+	------------------------
+    - plotHighTimeRes = false,
+    - smoothing = 1,
+    - backgroundSubstractionMode = 0,
+    - bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+	- dutycyclecorrect = false,
+    - timedelay = Dates.Hour(0),
+    - isobarToPlot = 0,
+    - plotsymbol = ".-",
+    - plotFittedInsteadOfSummed = true,
+    - timeFrame2plot=(DateTime(0),DateTime(3000)),
+    - timezone = "UTC",
+    - signalunit = "CPS",
+    - ion = "all"
+
+	returns a figure and axis, showing the time traces of the given masses and loaded MeasurementResult struct.
+	Shows only file-averages without background correction and no smooting as default.
+	"""
+	function plotTracesFromHDF5(file, massesToPlot;
+			    plotHighTimeRes = false,
+			    smoothing = 1,
+			    backgroundSubstractionMode = 0,
+			    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+				dutycyclecorrect = false,
+			    timedelay = Dates.Hour(0),
+			    isobarToPlot = 0,
+			    plotsymbol = ".-",
+			    plotFittedInsteadOfSummed = true,
+			    timeFrame2plot=(DateTime(0),DateTime(3000)),
+			    timezone = "UTC",
+			    signalunit = "CPS",
+			    ion = "all",
+			    subplotlayout = 111,
+				title = "",
+				returnAllMasses = false
+			    )
+		measResult = ResultFileFunctions.loadResults(file,
+							     massesToLoad=massesToPlot,
+							     useAveragesOnly=!plotHighTimeRes,
+							     raw=!plotFittedInsteadOfSummed,
+							     massMatchTolerance=0.01,
+							     startTime=timeFrame2plot[1],
+							     endTime=timeFrame2plot[2])				
+		if isobarToPlot != 0
+		  isobarResult = ResultFileFunctions.loadResults(file,
+		  					         massesToLoad=[isobarToPlot+0.3],
+		  					         massMatchTolerance=0.5,
+		  					         useAveragesOnly=!plotHighTimeRes,
+		  					         raw=!plotFittedInsteadOfSummed,
+							     	 startTime=timeFrame2plot[1],
+							     	 endTime=timeFrame2plot[2])
+		  measResult=ResultFileFunctions.joinResultsMasses!(measResult, isobarResult)
+		end
+
+		fig,ax,legStrings, mResPlotted = plotTraces(measResult,massesToPlot;
+			    smoothing = smoothing,
+			    backgroundSubstractionMode = backgroundSubstractionMode,
+			    bg = bg,
+				dutycyclecorrect = dutycyclecorrect,
+			    timedelay = timedelay,
+			    plotsymbol = plotsymbol,
+			    timezone = timezone,
+			    signalunit = signalunit,
+			    ion = ion,
+			    subplotlayout = subplotlayout,
+				title = title
+			    )
+		if returnAllMasses == true
+			measResult = ResultFileFunctions.loadResults(file,
+							     useAveragesOnly=!plotHighTimeRes,
+							     raw=!plotFittedInsteadOfSummed,
+							     startTime=timeFrame2plot[1],
+							     endTime=timeFrame2plot[2])
+		end	
+		return measResult,fig,ax,legStrings, mResPlotted
 	end
 
 
@@ -400,10 +499,10 @@ module PlotFunctions
     smoothing = 1,
     backgroundSubstractionMode = 0,
     bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+	dutycyclecorrect = false,
     timedelay = Dates.Hour(0),
     isobarToPlot = 0,
     plotsymbol = ".-",
-    plotFittedInsteadOfSummed = true,
     timeFrame2plot=(DateTime(0),DateTime(3000)),
     timezone = "UTC",
     signalunit = "CPS",
@@ -416,89 +515,39 @@ module PlotFunctions
 			    smoothing = 1,
 			    backgroundSubstractionMode = 0,
 			    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
+				dutycyclecorrect = false,
 			    isobarToPlot = 0,
 			    plotsymbol = ".-",
-			    plotFittedInsteadOfSummed = true,
 			    timeFrame2plot=(DateTime(0),DateTime(3000)),
 			    timezone = "UTC",
+				timedelay = Dates.Hour(0),
 			    signalunit = "CPS",
 			    ion = "all",
-			    savefigname = ""
+				subplotlayout = 111,
+			    savefigname = "",
+				title=""
 			    )
 		fullmeasResult = TOFTracer2.ImportFunctions.importExportedTraces(tracesfile, compositionfile)
 
-        if length(massesToPlot)>0
-		    indicesToPlot = [findfirst(round(m,digits=3) .== round.(fullmeasResult.MasslistMasses,digits=3)) for m in massesToPlot]
-		else
-		    indicesToPlot = [i for (i,m) in enumerate(fullmeasResult.MasslistMasses)]
-		end
-		indicesToPlot = indicesToPlot[indicesToPlot.!=nothing]
-		if isobarToPlot != 0
-		  isobarIndices = findall(round(isobarToPlot) .== round.(fullmeasResult.MasslistMasses))
-		else
-		  isobarIndices = []
-		end
-		indicesToPlot = vcat(indicesToPlot,isobarIndices)
-		if length(indicesToPlot) > 0
-		    indicesToPlot = sort(indicesToPlot)
-		else
-		    return error("No masses in the exported CSV matched the massesToPlot.")
-		end
+        fig, ax, legStrings, mResPlotted = plotTraces(fullmeasResult, massesToPlot; 
+				smoothing = smoothing,
+			    backgroundSubstractionMode = backgroundSubstractionMode,
+			    bg = bg,
+				dutycyclecorrect = dutycyclecorrect,
+				isobarToPlot = isobarToPlot,
+			    plotsymbol = plotsymbol,
+				timeFrame2plot = timeFrame2plot,
+			    timezone = timezone,
+				timedelay = timedelay,
+			    signalunit = signalunit,
+			    ion = ion,
+				subplotlayout = subplotlayout,
+				savefigname = savefigname, 
+				title=title
+				)
+				
 
-		measResult = ResultFileFunctions.MeasurementResult(fullmeasResult.Times,
-		    fullmeasResult.MasslistMasses[indicesToPlot],
-		    fullmeasResult.MasslistElements,
-		    fullmeasResult.MasslistElementsMasses,
-		    fullmeasResult.MasslistCompositions[:,indicesToPlot],
-		    fullmeasResult.Traces[:,indicesToPlot])
-
-		if (backgroundSubstractionMode == 0)
-		  background=0
-		elseif (backgroundSubstractionMode == 1)
-		  background = minimum(InterpolationFunctions.averageSamples(measResult.Traces,smoothing),dims=1)
-		elseif backgroundSubstractionMode == 2
-		  background = Statistics.mean(measResult.Traces[(measResult.Times.>bg[1]) .& (measResult.Times.<bg[2]),:],dims=1)
-		end
-
-		bgCorrectedTraces = measResult.Traces .- background
-
-		fig=figure()
-		ax = subplot(111)
-		semilogy(Dates.unix2datetime.(InterpolationFunctions.averageSamples(Dates.datetime2unix.(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol)
-
-		startTimeString = Dates.format(measResult.Times[1],"yyyy/mm/dd")
-		endTimeString = Dates.format(measResult.Times[end],"yyyy/mm/dd")
-		title("$startTimeString - $endTimeString")
-		xlabel("Time ["*timezone*"]")
-		ylabel("Signal ["*signalunit*"]")
-
-		legStrings = []
-		if ion in ["all","H+","H3O+"]
-			for i = 1:length(measResult.MasslistMasses)
-			  name = MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "H+")
-			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(name)")
-			end
-		elseif ion in ["NH4+", "NH3.H+","NH3H+"]
-			for i = 1:length(measResult.MasslistMasses)
-			  name = MasslistFunctions.sumFormulaStringFromCompositionArray(measResult.MasslistCompositions[:,i], ion = "NH3H+")
-			  push!(legStrings,"m/z $(round(measResult.MasslistMasses[i],digits=3)) - $(name)")
-			end
-		end
-
-		box = ax.get_position()
-		cols = 1
-
-		majorformatter = matplotlib.dates.DateFormatter("%m/%d %H:%M")
-		ax.xaxis.set_major_formatter(majorformatter)
-		legend(legStrings)
-		grid()
-
-		tight_layout()
-		if length(savefigname) > 0
-		    savefig(joinpath(dirname(tracesfile),savefigname))
-		    println("saved figure as $(savefigname) in the data folder.")
-		end
-		return fig,ax,measResult,legStrings
+		return fullmeasResultfig,ax,legStrings,mResPlotted
 	end
 
 
@@ -714,8 +763,8 @@ module PlotFunctions
             end
         end
         if axes !== NaN
-		    text.(stagestimes, #+Dates.Minute(5),
-		            axes.get_ylim()[1]*2,
+		    text.(stagestimes .+ Dates.Minute(3),
+		            axes.get_ylim()[0]*textoffset,
 		            strings2display,
 		            rotation=90,fontsize=fontsize)
 		end
@@ -825,8 +874,8 @@ module PlotFunctions
 	        xs = []
 	        ys = []
 	        deleteXlim = []
-		availableTraces = ResultFileFunctions.loadResults(file,masslistOnly=true)
-		data = ResultFileFunctions.getTraces(file,massIndices=[1])
+		availableTraces = ResultFileFunctions.loadResults(file,masslistOnly=true;useAveragesOnly=useAveragesOnly)
+		data = ResultFileFunctions.getTraces(file,massIndices=[1]; useAveragesOnly=useAveragesOnly)
 		ax.semilogy(availableTraces.Times, data, linewidth=2,
 		label="m/z $(round(availableTraces.MasslistMasses[1],digits=3)) -  $(MasslistFunctions.sumFormulaStringFromCompositionArray(availableTraces.MasslistCompositions[:,1]))","b")
 		ax.set_ylabel("CPS")

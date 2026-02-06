@@ -1,6 +1,7 @@
 module MasslistFunctions
 	using HDF5
 	using DelimitedFiles
+	using DataFrames
 
 	export IntegrationBorders, masslistPos, createMassList, loadMasslist, createCompound, massFromComposition, massFromCompositionArray, massFromCompositionArrayList, isotopesFromComposition, isotopesFromCompositionArray, sumFormulaStringFromCompositionArray, sumFormulaStringListFromCompositionArrayList, filterMassListByContribution1, filterMassListByContribution2, findClosestMassIndex, inCompositions, findInCompositions
 
@@ -677,5 +678,45 @@ module MasslistFunctions
         end
         return transpose(Int64.(compositions))
     end
+
+	"""
+		expandCompositions(compositions, elements; elements2expand2=masslistElements, ion="")
+
+	
+	"""
+	function expandCompositions(compositions, elements; elements2expand2=masslistElements, ion="")
+		if ion != ""
+			ioncomposition = compositionFromName(ion; possibleElements=elements2expand2, ions=["H+"])
+		else
+			ioncomposition = zeros(length(elements2expand2))
+		end
+		if all([el in elements2expand2 for el in elements])
+			println("expanding compositions to $(elements2expand2)")
+			helper = [findfirst(el .== elements) for el in elements2expand2]
+			compositions_expanded = Matrix(undef,length(elements2expand2),size(compositions)[2])
+			for (i,h) in enumerate(helper)
+				if !(isnothing(h))
+					compositions_expanded[i,:] .= compositions[h,:]
+				else
+					compositions_expanded[i,:] .= zeros(size(compositions)[2])
+				end
+			end
+			compositions_expanded_final = compositions_expanded .- ioncomposition
+			return Int.(compositions_expanded_final)
+		else
+			println("compositions can not be expanded, because not all elements found in elementlist to expand to.")
+		end
+	end
+
+	function findfirstcolumn(targetcol, matrix)
+	n=1
+	for col in eachcol(matrix) 
+		if all(col .== targetcol)
+		return n
+		end
+		n += 1
+	end
+	return nothing
+	end
 
 end
