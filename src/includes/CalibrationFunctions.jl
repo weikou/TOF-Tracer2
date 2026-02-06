@@ -186,7 +186,7 @@ module CalibrationFunctions
 		param = fit.param
 		cov = estimate_covar(fit)
 		stderror = sqrt.([cov[1,1], cov[2,2]])
-		fitlabel =  string(round(param[1],sigdigits=3),"+",round(param[2],sigdigits=3),"*x")
+		fitlabel =  string(round(param[1],sigdigits=3),"*x +",round(param[2],sigdigits=3))
 		return (param,stderror,["linear" fitlabel])
 	end
 
