@@ -293,6 +293,8 @@ module PlotFunctions
 
 	plots time traces from a MeasurementResult struct.
 	
+	returns figure, axis, legend strings and the MeasurementResult struct that was plotted (after subsetting, potential timeshift and background corrections). 
+
 	### kwargs standard settings:
 	- smoothing = 1,
 	- backgroundSubstractionMode = 0,
@@ -424,9 +426,11 @@ module PlotFunctions
     - timezone = "UTC",
     - signalunit = "CPS",
     - ion = "all"
+	- subplotlayout = 111
+	- title = ""
 
-	returns a figure and axis, showing the time traces of the given masses and loaded MeasurementResult struct.
-	Shows only file-averages without background correction and no smooting as default.
+	returns a figure and axis of the plotted traces, legStrings and the data as plotted in a MeasurementResult struct.
+	Shows only file-averages without background correction and no smooting as default. Returns the
 	"""
 	function plotTracesFromHDF5(file, massesToPlot;
 			    plotHighTimeRes = false,
@@ -444,7 +448,7 @@ module PlotFunctions
 			    ion = "all",
 			    subplotlayout = 111,
 				title = "",
-				returnAllMasses = false
+				savefigname = ""
 			    )
 		measResult = ResultFileFunctions.loadResults(file,
 							     massesToLoad=massesToPlot,
@@ -476,16 +480,10 @@ module PlotFunctions
 			    signalunit = signalunit,
 			    ion = ion,
 			    subplotlayout = subplotlayout,
-				title = title
+				title = title,
+				savefigname = savefigname
 			    )
-		if returnAllMasses == true
-			measResult = ResultFileFunctions.loadResults(file,
-							     useAveragesOnly=!plotHighTimeRes,
-							     raw=!plotFittedInsteadOfSummed,
-							     startTime=timeFrame2plot[1],
-							     endTime=timeFrame2plot[2])
-		end	
-		return fig,ax,legStrings,measResult 
+		return fig,ax,legStrings,mResPlotted
 	end
 
 
@@ -507,7 +505,11 @@ module PlotFunctions
     timeFrame2plot=(DateTime(0),DateTime(3000)),
     timezone = "UTC",
     signalunit = "CPS",
-    ion = "all"
+    ion = "all",
+    subplotlayout = 111,
+    savefigname = "",
+    title = ""
+	)
 
 	returns a figure and axis, showing the time traces of the given masses and the loaded MeasurementResult struct.
 	Shows data without background correction and no smooting as default.

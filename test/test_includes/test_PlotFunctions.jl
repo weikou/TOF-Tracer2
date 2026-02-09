@@ -90,6 +90,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
 	    
     @test isa(tracesFig,Figure)
     @test isa(tracesAx,PyCall.PyObject)
+    @test isa(legStrings,Vector{Any})
     @test isa(mRes,TOFTracer2.ResultFileFunctions.MeasurementResult)
     @test isa(legStrings,Vector{Any})
     @test length(legStrings) == length(mRes.MasslistMasses)
