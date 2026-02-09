@@ -447,7 +447,8 @@ module PlotFunctions
 			    signalunit = "CPS",
 			    ion = "all",
 			    subplotlayout = 111,
-				title = ""
+				title = "",
+				savefigname = ""
 			    )
 		measResult = ResultFileFunctions.loadResults(file,
 							     massesToLoad=massesToPlot,

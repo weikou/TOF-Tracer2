@@ -76,7 +76,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
         massLibrary.APINENE_nh4[1]
     ]
 
-	tracesFig, tracesAx, mRes = PlotFunctions.plotTracesFromHDF5(resfile, massesToPlot;
+	tracesFig, tracesAx, legStrings, mRes = PlotFunctions.plotTracesFromHDF5(resfile, massesToPlot;
 		plotHighTimeRes=true,
 		smoothing=0,
 		backgroundSubstractionMode=0,
@@ -91,6 +91,7 @@ import TOFTracer2.ResultFileFunctions as ResFF
 	    
     @test isa(tracesFig,Figure)
     @test isa(tracesAx,PyCall.PyObject)
+    @test isa(legStrings,Vector{Any})
     @test isa(mRes,TOFTracer2.ResultFileFunctions.MeasurementResult)
     
     @testset "plotStages" begin
@@ -114,13 +115,12 @@ import TOFTracer2.ResultFileFunctions as ResFF
     @testset "plotTracesFromExportedCSV" begin
         tracesfile = joinpath(fp,"export1","ptr3traces_CLOUDheader.csv")
         compositionfile = joinpath(fp,"export1","ptr3compositions_CLOUDheader.txt")
-        fig,ax,measResult,legStrings = plotF.plotTracesFromExportedCSV(tracesfile, compositionfile, massesToPlot;
+        fig,ax,legStrings,measResult = plotF.plotTracesFromExportedCSV(tracesfile, compositionfile, massesToPlot;
 			smoothing = 1,
 			backgroundSubstractionMode = 0,
 			bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
 			isobarToPlot = 0,
 			plotsymbol = ".-",
-			plotFittedInsteadOfSummed = true,
 			timeFrame2plot=(DateTime(0),DateTime(3000)),
 			timezone = "UTC",
 			signalunit = "CPS",
