@@ -479,7 +479,8 @@ module PlotFunctions
 			    signalunit = signalunit,
 			    ion = ion,
 			    subplotlayout = subplotlayout,
-				title = title
+				title = title,
+				savefigname = savefigname
 			    )
 		return fig,ax,legStrings,mResPlotted
 	end
@@ -503,7 +504,11 @@ module PlotFunctions
     timeFrame2plot=(DateTime(0),DateTime(3000)),
     timezone = "UTC",
     signalunit = "CPS",
-    ion = "all"
+    ion = "all",
+    subplotlayout = 111,
+    savefigname = "",
+    title = ""
+	)
 
 	returns a figure and axis, showing the time traces of the given masses and the loaded MeasurementResult struct.
 	Shows data without background correction and no smooting as default.
