@@ -74,20 +74,25 @@ module ExportFunctions
 		return (cloudheader_traces, cloudheader_compositions)
 	end
     
-	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, headers = ("",""), ion = "H+", average=0,filenameAddition="_CLOUDheader")
+	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, additionalColumns=DataFrame(), headers = ("",""), ion = "H+", average=0,filenameAddition="_CLOUDheader")
 	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions$(filenameAddition).txt")
 	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces$(filenameAddition).csv")
 	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions; elements=elementNames, ion = ion)
 	  f = open(joinpath(saveFolderPath,"ptr3compositions$(filenameAddition).txt"), "w")
 	  write(f, headers[2])
-	  if transmission != 0
+	  if (transmission != 0) & (size(additionalColumns) == (0,0))
 	  	DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula" "InletTransmission"],))
-	  	DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas, round.(transmission, digits=5)))
+	  	DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas, round.(transmission, digits=5)))		
+	  elseif (transmission != 0) & (size(additionalColumns) != (0,0))
+			DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula" "InletTransmission"], reshape(names(additionalColumns),1,length(names(additionalColumns)))))
+			DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas, round.(transmission, digits=5), Matrix(additionalColumns)))		
+	  elseif size(additionalColumns) != (0,0)
+			DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula"], reshape(names(additionalColumns),1,length(names(additionalColumns)))))
+			DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas, Matrix(additionalColumns)))		
 	  else
 	  	DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula"],))
 	  	DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas))
 	  end
-
 	  close(f)
 	  f = open(joinpath(saveFolderPath,"ptr3traces$(filenameAddition).csv"), "w")
 	  write(f, headers[1])
