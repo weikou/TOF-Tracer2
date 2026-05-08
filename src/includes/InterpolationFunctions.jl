@@ -230,7 +230,25 @@ module InterpolationFunctions
     """
         interpolatedSum(startIndexExact::AbstractFloat, endIndexExact::AbstractFloat, yAxis)
         
-    Returns the interpolated sum over the yAxis array between exact indices.
+    Compute a sub-index–aware sum (integral) of a segment within an array `yAxis`, using linear interpolation at the fractional boundaries.
+	# Arguments	
+	- `startIndexExact::AbstractFloat`: The exact (possibly fractional) starting index of the segment to sum.
+	- `endIndexExact::AbstractFloat`: The exact (possibly fractional) ending index of the segment to sum.
+	- `yAxis::AbstractVector`: The array of values to sum over.
+
+	# Returns
+	- `ret::Float64`: The computed sum over the specified segment, accounting for fractional contributions at the boundaries.
+
+	# Notes
+	- The function assumes `yAxis` contains uniformly spaced samples.
+	- Fractional corrections (`subIdxStartRoundError` and `subIdxEndRoundError`) are used to interpolate boundary points.
+	- Out-of-bounds ranges result in a warning: `"interpolatedSum returns 0, as startIndexExact or endIndexExact were out-of-bounds."`
+
+	# Example
+	```julia
+	yAxis = [0, 2, 4, 6, 8, 10]
+	val = InterpolationFunctions.interpolatedSum(1.3, 4.7, yAxis)
+	# Integrates between ~indices 1.3 and 4.7 → returns ≈ 18.4
     """
 	function interpolatedSum(startIndexExact::AbstractFloat, endIndexExact::AbstractFloat, yAxis)
 	  subIdxStart::Int64 = ceil(startIndexExact)
@@ -280,6 +298,16 @@ module InterpolationFunctions
 	  [median(v[i:(i+ws-1)]) for i=1:(length(v)-ws+1)]
 	end
 =#
+
+"""
+	missingcor(x,y)
+
+Returns the correlation between two vectors x and y, ignoring missing values.
+"""
+function missingcor(x,y)
+    mask = .!(ismissing.(x) .| ismissing.(y))
+    return Statistics.cor(x[mask], y[mask])
+end
 
     """
         nanmean(x::AbstractArray)
@@ -357,6 +385,24 @@ module InterpolationFunctions
 		elseif sum(isfinite.(x)) == 0
 			return NaN
 		end
+	end
+
+	    """
+        missingsum(x::AbstractArray)
+
+    returns the sum over the given array, thereby ignoring nans, except the whole array is nans
+    """
+	function missingsum(x::Vector)
+		return sum(skipmissing(x))
+	end
+	
+	"""
+        missingsum(x::Matrix;dims=1)
+
+    returns the sum over the given array, thereby ignoring nans, except the whole array is nans
+    """
+	function missingsum(x::Matrix;dims=1)
+		return mapslices(missingsum,x;dims = dims)
 	end
 	
     """
@@ -509,11 +555,15 @@ module InterpolationFunctions
     and that the columns to calculate the mean contain only numerical values to obtain proper results.
     Returns the mean values per stage.
     """
-    function calculateStageMeans(stagesTimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
+    function calculateStageMeans(stagesTimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false,calcStdev=true,lastMinutes=0,firstMinutes=0, calcMedian=false)
         data_mean = DataFrame([name => [] for name in names(data)])
         if calcStdev
             data_stdv = DataFrame(["$(name)_err" => [] for name in names(data)[2:end]])
             data_stdv[!,data_timelabel] = []
+        end
+		if calcMedian
+            data_median = DataFrame(["$(name)_median" => [] for name in names(data)[2:end]])
+            data_median[!,data_timelabel] = []
         end
         timecol = findfirst(x -> x==data_timelabel,names(data))
         if timecol==1
@@ -533,11 +583,13 @@ module InterpolationFunctions
                 end
                 if ignoreNaNs
                     a_mean = nanmean(Matrix(a);dims=1)
+                    a_median = nanmedian(Matrix(a);dims=1)
                     if calcStdev
                         a_stdv = nanstd(Matrix(a);dims=1)
                     end
                 else
                     a_mean = Statistics.mean(Matrix(a);dims=1)
+                    a_median = Statistics.median(Matrix(a);dims=1)
                     if calcStdev
                         a_stdv = Statistics.std(Matrix(a);dims=1)
                     end
@@ -546,9 +598,13 @@ module InterpolationFunctions
                 if calcStdev
                     push!(data_stdv,hcat(a_stdv,stagestimes[i]))
                 end
+				if calcMedian
+                	push!(data_median,hcat(a_median,stagestimes[i]))
+				end
             end
             if calcStdev
-                return DataFrames.outerjoin(data_mean, data_stdv, on = data_timelabel)
+                df = DataFrames.outerjoin(data_mean, data_stdv, on = data_timelabel)
+				return DataFrames.outerjoin(df, data_median,on = data_timelabel)
             else
                 return data_mean
             end
@@ -556,23 +612,26 @@ module InterpolationFunctions
             println("Ensure, that your time array is on the left hand side of your data array and that your timelabel is correct.")
         end
     end
-
+#=
     """
-        calculateStageMeans(stagestimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false)
+        calculateStageMeans(stagestimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false,calcMedian=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
 
     Arguments
     - stagestimes: an array or dataframe column containing the stage times
     - data: the data to average in a matrix.
     - times: the timearray of the data.
 
-    Returns the mean values per stage.
+    Returns the mean (and std.-deviation) or the median (and std.-deviation) values per stage.
     """
-    function calculateStageMeans(stagesTimes::Array{DateTime,1}, data::Matrix, times::Vector; ignoreNaNs=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
+    function calculateStageMeans(stagesTimes::Array{DateTime,1}, data::Matrix, times::Vector; ignoreNaNs=false,calcStdev=true,calcMedian=false,lastMinutes=0,firstMinutes=0)
         data_mean = Matrix{Float64}(undef,length(stagesTimes),size(data)[2])
         if calcStdev
             data_stdv = Matrix{Float64}(undef,length(stagesTimes),size(data)[2])
         end
-        stagestimes = copy(stagesTimes)
+		if calcMedian
+			data_median = Matrix{Float64}(undef,length(stagesTimes),size(data)[2])
+        end
+		stagestimes = copy(stagesTimes)
         if stagestimes[end] < times[end]
             push!(stagestimes,times[end]+Dates.Hour(1))
         end
@@ -588,26 +647,34 @@ module InterpolationFunctions
             end
             if ignoreNaNs
                 a_mean = nanmean(Matrix(a);dims=1)
+                a_median = nanmedian(Matrix(a);dims=1)
                 if calcStdev
                     a_stdv = nanstd(Matrix(a);dims=1)
                 end
             else
                 a_mean = Statistics.mean(Matrix(a);dims=1)
+                a_median = Statistics.median(Matrix(a);dims=1)
                 if calcStdev
                     a_stdv = Statistics.std(Matrix(a);dims=1)
                 end
             end
             data_mean[i,:] = a_mean
+            data_median[i,:] = a_median
             if calcStdev
                 data_stdv[i,:] = a_stdv
             end
         end
-        if calcStdev
+		
+		if calcMedian & calcStdev
+			return (data_median, data_stdv)
+		elseif calcStdev
             return (data_mean, data_stdv)
-        else
+		elseif calcMedian
+			return data_median
+		else
             return data_mean
         end
     end
-
+=#
 
 end

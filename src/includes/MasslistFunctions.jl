@@ -5,11 +5,43 @@ module MasslistFunctions
 
 	export IntegrationBorders, masslistPos, createMassList, loadMasslist, createCompound, massFromComposition, massFromCompositionArray, massFromCompositionArrayList, isotopesFromComposition, isotopesFromCompositionArray, sumFormulaStringFromCompositionArray, sumFormulaStringListFromCompositionArrayList, filterMassListByContribution1, filterMassListByContribution2, findClosestMassIndex, inCompositions, findInCompositions
 
-        mutable struct IntegrationBorders
-            centerMass::Array{Float64}
-            lowMass::Array{Float64}
-            highMass::Array{Float64}
-        end
+	massC=12
+	massC13=13.00335
+	massH=1.00783
+	massHplus=1.007276
+	massN=14.00307
+	massO=15.99492
+	massO18=17.99916
+	massS=31.97207
+	massI = 126.90448
+	massBr =78.91834
+	massH2O = 18.01056
+
+	nC13=0
+	nO18=0
+
+	abundanceC13 = 0.010816
+	abundanceO18 = 0.002005
+	
+	
+	masslistElements = ["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"] # should not be changed for backwards-compatibility
+	masslistElementMasses = [massC, massC13, massH, massHplus, massN, massO, massO18, massS]
+	
+    elementsMassesDict = Dict("C"=>massC, "C(13)" => massC13, 
+                           "H" => massH, "H+" => massHplus,
+                           "N" => massN, "S" => massS,
+                           "O" => massO, "O(18)" => massO18,
+						   "I" => massI,
+						   "NH3" => massN + 3*massH,
+						   "Br" => massBr,
+						   "(H2O)" => massH2O)
+
+
+	mutable struct IntegrationBorders
+		centerMass::Array{Float64}
+		lowMass::Array{Float64}
+		highMass::Array{Float64}
+	end
         
         """
             IntegrationBorders(masslist::Array{Float64,1}; resolution=3000.0)
@@ -49,29 +81,6 @@ module MasslistFunctions
 	    function IntegrationBorders()
 	    	return MethodError("IntegrationBorders(masslist::Array{Float64,1}; resolution=3000.0) expects at least a masslist (1D-Array).")
 	    end
-
-	massC=12
-	massC13=13.00335
-	massH=1.00783
-	massHplus=1.007276
-	massN=14.00307
-	massO=15.99492
-	massO18=17.99916
-	massS=31.97207
-	nC13=0
-	nO18=0
-
-	abundanceC13 = 0.010816
-	abundanceO18 = 0.002005
-	
-	
-	masslistElements = ["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"] # should not be changed for backwards-compatibility
-	masslistElementMasses = [massC, massC13, massH, massHplus, massN, massO, massO18, massS]
-	
-    elementsMassesDict = Dict("C"=>massC, "C(13)" => massC13, 
-                           "H" => massH, "H+" => massHplus,
-                           "N" => massN, "S" => massS,
-                           "O" => massO, "O(18)" => massO18)
 
     """
         createElementMassesArray(elements)
@@ -128,7 +137,42 @@ module MasslistFunctions
 	    end
 	    return 0
 	end
-		
+
+	"""
+    uniqueIndices(x)
+
+	returns the indices to apply to a 1D-array x to give a unique final array. E.g.
+
+	```
+	julia> x = [1,1,7,8,7]
+	julia> uniqueIndices(x)
+	3-element Vector{Int64}:
+	1
+	3
+	4
+	julia> x[uniqueIndices(x)]
+	3-element Vector{Int64}:
+	1
+	7
+	8
+	julia> unique(x) == x[uniqueIndices(x)]
+	true
+	```
+	"""
+	uniqueIndices(x) = unique(i -> x[i], 1:length(x))
+
+
+	"""
+			removeMasslistDuplicates()
+	-
+	"""
+	function removeMasslistDuplicates(measResult)
+		measResult.MasslistCompositions = measResult.MasslistCompositions[:,uniqueIndices(measResult.MasslistMasses)]
+		measResult.Traces = measResult.Traces[:,uniqueIndices(measResult.MasslistMasses)]
+		measResult.MasslistMasses = measResult.MasslistMasses[uniqueIndices(measResult.MasslistMasses)]
+		return measResult
+	end
+
 	"""
 	    createMassList(; C=0:0, O=0:0, N=0:0, S=0:0, nHplus=1, H=0:100, allowRadicals=false)
 	
@@ -165,42 +209,7 @@ module MasslistFunctions
 	  sortIndices = sortperm(masses)
 	  return masses[sortIndices],masslistElements,masslistElementMasses, masslistCompositions[sortIndices]
 	end
-
-	"""
-		uniqueIndices(x)
-
-	returns the indices to apply to a 1D-array x to give a unique final array. E.g. 
-	
-	```
-	julia> x = [1,1,7,8,7]
-	julia> uniqueIndices(x)
-	3-element Vector{Int64}:
-	1
-	3
-	4
-	julia> x[uniqueIndices(x)]
-	3-element Vector{Int64}:
-	1
-	7
-	8
-	julia> unique(x) == x[uniqueIndices(x)]
-	true
-	```
-	"""
-	uniqueIndices(x) = unique(i -> x[i], 1:length(x))
-
-
-	"""
-		removeMasslistDuplicates()
-
-	"""
-    function removeMasslistDuplicates(measResult)
-				measResult.MasslistCompositions = measResult.MasslistCompositions[:,uniqueIndices(measResult.MasslistMasses)]
-				measResult.Traces = measResult.Traces[:,uniqueIndices(measResult.MasslistMasses)]
-				measResult.MasslistMasses = measResult.MasslistMasses[uniqueIndices(measResult.MasslistMasses)]
-				return measResult
-	end
-
+    
     """
         loadMasslist(filename)
     
@@ -241,24 +250,28 @@ module MasslistFunctions
 		    end
 	      end
 	      sortIndices = sortperm(masses)
-		  println("Removing duplicates.")
-		  unique_indices = uniqueIndices(masses[sortIndices])
-		  
-	      return masses[sortIndices][unique_indices],masslistElements, masslistElementMasses, masslistCompositions[sortIndices][unique_indices]
+	      return masses[sortIndices],masslistElements, masslistElementMasses, masslistCompositions[sortIndices]
 	  end
 	end
 
     """
         createCompound(; C=0, C13=0, H=0, Hplus=1, N=0, O=0, O18=0, S=0)
+		createCompound(name::String; elements=MasslistFunctions.MasslistElements)
     
     returns a tuple (mass::Float, elements::Vector, elementMasses::Vector, composition::Vector) containing the informations of the compound as defined by the integers given for the possible elements.
     
-    ! Note, that this function returns still elements and elementMasses of length 8 and is not yet flexible !
-    """
+	Method createCompound(; C=0, C13=0, H=0, Hplus=1, N=0, O=0, O18=0, S=0) is not flexible and will always return the standard length 8 compositions, based on the standard MasslistMasses.masslistElements
+    Use Method createCompound(name::String; elements=MasslistFunctions.MasslistElements), if you work with a non-standard elements array. 
+	"""
 	function createCompound(; C=0, C13=0, H=0, Hplus=1, N=0, O=0, O18=0, S=0)
 	  mass = C*massC + O*massO + N*massN +H*massH + S*massS + Hplus*massHplus + C13*massC13 + O18*massO18
 	  composition = [C, C13, H, Hplus, N, O, O18, S]
-	  return mass, masslistElements, masslistElementMasses, composition
+	  return (mass, masslistElements, masslistElementMasses, composition)
+	end
+	function createCompound(name;elements=MasslistFunctions.masslistElements)
+		comp = MasslistFunctions.compositionFromName(name;possibleElements=elements)
+	  	mass = MasslistFunctions.massFromCompositionArray(comp;elements=elements)
+	  	return (mass, elements, [MasslistFunctions.elementsMassesDict[key] for key in elements], comp)
 	end
 
     """
@@ -331,6 +344,22 @@ module MasslistFunctions
 	  return mass
 	end
 
+    """
+        massdefectFromCompositionArray(composition, mass;elements=["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"])
+    
+    Calculates the massdefect of a molecule. 
+    If elements is not user-defined, from a typical length-8 composition array - otherwise from the masses defined in elementsMassesDict for the user-given elements.
+    """ 
+	function massdefectFromCompositionArray(composition, mass;elements=masslistElements)
+		elementMassdefects = [elementsMassesDict[el] - round.(elementsMassesDict[el]) for el in elements]
+		if !(all(composition .== 0))
+			massdefect = sum(elementMassdefects .* composition)
+		else
+			massdefect = mass .- round(mass)
+		end
+		return massdefect
+	end
+
 	"""
         massFromCompositionArrayList(compositions;elements=["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"])
     
@@ -355,13 +384,48 @@ module MasslistFunctions
 	      for i=1:size(compositions,2)
 	        push!(ret,massFromCompositionArray(compositions[:,i];elements=elements))
 	      end
+		return ret
 	  elseif (findfirst(size(elements) .== size(compositions)) .== findlast(size(elements) .== size(compositions)) == 2) | (a==2)	      
 	      ret = Array{Float32,1}()
 	      for i=1:size(compositions,1)
 	        push!(ret,massFromCompositionArray(compositions[i,:];elements=elements))
 	      end
+	  	return ret
 	  end
-	  return ret
+	end
+
+	"""
+        massdefectFromCompositionArrayList(compositions, masses;elements=["C", "C(13)", "H", "H+", "N", "O", "O(18)", "S"])
+    
+    Calculates and returns a vector with the massdefects based on a composition Matrix (size = (8,n), like MeasurementResult.MasslistCompositions, if elements not user-defined). 
+    Otherwise from the masses defined in elementsMassesDict for the user-given array of elements.
+    """
+	function massdefectFromCompositionArrayList(compositions, masses;elements=masslistElements)
+	  a = 0
+	  if !(length(elements) in size(compositions))
+	      println("direction of composition matrix and elements are incompatible.")
+	  elseif findfirst(size(elements) .== size(compositions)) .!= findlast(size(elements) .== size(compositions))
+	      println("direction of composition matrix and elements could not be clearly determined. Using measResult.MasslistComposition classical dimensions? y/n")
+	      
+	      if readline == "y"
+	        a = 1
+	      else 
+	        a = 2
+	      end
+	  end
+	  if (findfirst(size(elements) .== size(compositions)) .== findlast(size(elements) .== size(compositions)) == 1) | (a==1)	  
+	      ret = Array{Float32,1}()
+	      for i=1:size(compositions,2)
+	        push!(ret,massdefectFromCompositionArray(compositions[:,i],masses[i];elements=elements))
+	      end
+		return ret
+	  elseif (findfirst(size(elements) .== size(compositions)) .== findlast(size(elements) .== size(compositions)) == 2) | (a==2)	      
+	      ret = Array{Float32,1}()
+	      for i=1:size(compositions,1)
+	        push!(ret,massdefectFromCompositionArray(compositions[i,:],masses[i];elements=elements))
+	      end
+	  	return ret
+	  end
 	end
 #=
     """
@@ -459,8 +523,6 @@ module MasslistFunctions
         sumFormulaStringFromCompositionArray(composition; elements = masslistElements, ion = "H+", correctForIon=true)
         
     Determines the sumFormula string from a composition array of the form as given by the elements list. 
-    
-    THIS IS BUGGY: IT DOES CURRENTLY NOT CORRECT FOR IONS WITHIN THE COMPOSITION ARRAY!!!
         
     # Examples:
     julia> sumFormulaStringFromCompositionArray([10,0,19,1,1,2,0,0]; ion="NH3H+") == "C10H16O2.NH3H+"

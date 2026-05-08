@@ -266,12 +266,16 @@ module CalibrationFunctions
 		return (param,stderror,["exponential+linear" fitlabel])
 	end
 	"""
-		fitParameters_Exponential_Constant()
+		fitParameters_Exponential_Constant(xdata,ydata;decay=true)
 
 	is an implementation to get fit parameters for a combination of a constant and an exponential function. \nSee fitParameters(xdata,ydata;functiontype=" ")
 	"""
-	function fitParameters_Exponential_Constant(xdata,ydata)
-		p0 = [maximum(ydata), 0.0, minimum(ydata)]
+	function fitParameters_Exponential_Constant(xdata,ydata;decay=true)
+		if decay
+			p0 = [maximum(ydata), 0.0, minimum(ydata)]
+		else
+			p0 = [minimum(ydata)-maximum(ydata), 0.0, maximum(ydata)]
+		end
 		m(t, p) = p[1] * exp.(- p[2] * t) .+ p[3]
 		fit = curve_fit(m, xdata, ydata, p0)
 		param = fit.param
@@ -352,8 +356,10 @@ module CalibrationFunctions
 	function fitParameters(xdata,ydata;functiontype="")
 		if functiontype == "double exponential"
 			(param,stderror,fitlabel) = fitParameters_DoubleExponential(xdata,ydata)
-		elseif functiontype == "exponential"
-			(param,stderror,fitlabel) = fitParameters_Exponential_Constant(xdata,ydata)
+		elseif functiontype == "exponential decay"
+			(param,stderror,fitlabel) = fitParameters_Exponential_Constant(xdata,ydata;decay=true)
+		elseif functiontype == "const - exponential"
+			(param,stderror,fitlabel) = fitParameters_Exponential_Constant(xdata,ydata;decay=false)
 		elseif functiontype == "exponential+linear"
 			(param,stderror,fitlabel) = fitParameters_Exponential_Linear(xdata,ydata)
 		elseif functiontype == "linear"
@@ -553,8 +559,10 @@ julia> applyFunction(collect(0:0.1:10),[1,2];functiontype="power")
 function applyFunction(xdata::Vector,params;functiontype="")
     if functiontype == "double exponential"
         result = DoubleExponential(xdata,params)
-    elseif functiontype == "exponential"
+    elseif functiontype == "exponential decay"
         result = Exponential(xdata,params)
+	elseif functiontype == "const - exponential"
+		result = Exponential(xdata,params;decay=false)
     elseif functiontype == "exponential+linear"
         result = Exponential_Linear(xdata,params)
     elseif functiontype == "power"
@@ -839,10 +847,10 @@ function calculateInletTransmission_CLOUD(compositions; elementList = ["C","C(13
 	pene_m_out_of_chamber = [pene_core_laminar(m; temp = 273.15+roomT, L_eff = inletLength, Q_tot = flow, Qs=sampleflow) for m in masses]
 
 	pene_in_chamber = 1.0 .- (( (1.0 .- pene_m_in_chamber ) .*
-					(walllossspecies_chamberT .+ radicals) ))
+					(walllossspecies_chamberT .| radicals) ))
 	pene_out_of_chamber = 1.0 .- (((1.0 .-pene_m_out_of_chamber ) .*
-					(walllossspecies_roomT .+ radicals) ))
-	pene_in_ptr = 1.0 .- (0.6667 .* ((walllossspecies_ptrT .+ radicals) .> 0) )
+					(walllossspecies_roomT .| radicals) ))
+	pene_in_ptr = 1.0 .- (0.6667 .* ((walllossspecies_ptrT .| radicals) .> 0) )
 	pene_total = pene_in_ptr .* pene_out_of_chamber .* pene_in_chamber
 	pene_total[pene_total .== 0.0] .= 1.0 # for ions that have an only-zero composition (unknown species should not be inlet-loss corrected!)
 	return pene_total
