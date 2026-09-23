@@ -5,7 +5,7 @@ using Dates
 using DelimitedFiles
 using PyPlot
 
-export correctMassScaleAndExtractSumSpec, correctMassScaleAndExtractSumSpecAPi, baselineAndPeakshape, deconvolute, ResultFileFunctions, MasslistFunctions, PlotFunctions, InterpolationFunctions, massLibrary
+export correctMassScaleAndExtractSumSpec, correctMassScaleAndExtractSumSpecAPi, baselineAndPeakshape, deconvolute, ResultFileFunctions, MasslistFunctions, PlotFunctions, InterpolationFunctions, massLibrary, ExportFunctions, ImportFunctions, CalibrationFunctions
 
 if (nprocs() < 2 && isdefined(Main, :usePrecaching) && usePrecaching)
     println("Adding process for file precaching!")

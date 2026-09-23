@@ -5,7 +5,7 @@ module BaselineFunctions
 	export calculateBaseline
 
 """
-    calculateBaseline(massAxis, avgSpectrum; baselinePointWidth = 0.3, threshold = 0.2)
+    calculateBaseline(massAxis, avgSpectrum; baselinePointWidth = 0.3, baselineThreshold = 0.2)
 
 Estimate the spectral baseline and noise level from a given averaged spectrum.
 
@@ -13,7 +13,7 @@ Estimate the spectral baseline and noise level from a given averaged spectrum.
 - `massAxis::AbstractVector`: The mass-to-charge (m/z) axis corresponding to the spectrum.
 - `avgSpectrum::AbstractVector`: The averaged intensity values of the spectrum.
 - `baselinePointWidth::Real=0.3`: The half-width (in m/z units) of the window used to compute local baseline points.
-- `threshold::Real=0.2`: Initial quantile threshold for selecting low-intensity baseline samples.
+- `baselineThreshold::Real=0.2`: Initial quantile threshold for selecting low-intensity baseline samples.
 
 # Returns
 - `baselinePoints::Vector{Float64}`: The m/z positions at which baseline values were estimated.
