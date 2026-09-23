@@ -16,8 +16,8 @@
 	    @test all(isapprox.(CalF.fitParameters(xdat,p[1]*exp.(.-(p[2]) .* xdat) .+ p[3] - p[4]* xdat;functiontype="exponential+linear")[1],p[1:4]))
 	    @test all(CalF.fitParameters(xdat,p[1]*exp.(.-(p[2]) .* xdat) .+ p[3] - p[4]* xdat;functiontype="exponential+linear")[2] .< 1e-6)
 		    
-	    @test all(isapprox.(CalF.fitParameters(xdat,p[1] * exp.(- p[2] * xdat) .+ p[3];functiontype="exponential")[1],p[1:3]))
-	    @test all(CalF.fitParameters(xdat,p[1] * exp.(- p[2] * xdat) .+ p[3];functiontype="exponential")[2] .< 1e-10)
+	    @test all(isapprox.(CalF.fitParameters(xdat,p[1] * exp.(- p[2] * xdat) .+ p[3];functiontype="exponential decay")[1],p[1:3]))
+	    @test all(CalF.fitParameters(xdat,p[1] * exp.(- p[2] * xdat) .+ p[3];functiontype="exponential decay")[2] .< 1e-10)
 		    
 	    @test all(isapprox.(CalF.fitParameters(xdat,p[1] * exp.(-p[2]*xdat) .+ p[3]*exp.(-p[4]*xdat) .+ p[5];functiontype="double exponential")[1],p[1:5]))
 	    @test all(CalF.fitParameters(xdat,p[1] * exp.(-p[2]*xdat) .+ p[3]*exp.(-p[4]*xdat) .+ p[5];functiontype="double exponential")[2] .< 1e-6)
@@ -44,7 +44,7 @@
 	
 	@testset "applyFunction" begin
 	    @test CalF.applyFunction(xdat,p;functiontype="double exponential") == p[1] * exp.(-p[2]*xdat) .+ p[3]*exp.(-p[4]*xdat) .+ p[5]
-	    @test CalF.applyFunction(xdat,p[1:3];functiontype="exponential") == p[1] * exp.(-p[2]*xdat) .+ p[3]
+	    @test CalF.applyFunction(xdat,p[1:3];functiontype="exponential decay") == p[1] * exp.(-p[2]*xdat) .+ p[3]
         @test CalF.applyFunction(xdat,p[1:4];functiontype="exponential+linear") == p[1] * exp.(-p[2]*xdat) .+ p[3] .- p[4] .*xdat
         @test CalF.applyFunction(xdat,p[1:2];functiontype="power") == p[1] .* xdat .^  p[2]
         @test CalF.applyFunction(xdat,p[1:3];functiontype="power with offset") == p[1].*xdat .^ p[2] .+ p[3]

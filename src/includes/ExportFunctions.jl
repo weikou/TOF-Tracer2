@@ -2,9 +2,10 @@ module ExportFunctions
 	using ..InterpolationFunctions
 	using Dates
 	using DelimitedFiles
+	using DataFrames
 	import ..MasslistFunctions
 
-	export exportTracesCSV, exportTracesCSVLossCorr, toMatlabTime, fromMatlabTime
+	export exportTracesCSV, exportTracesCSVLossCorr, toMatlabTime, fromMatlabTime, CLOUDheader, exportTracesCSV_CLOUD, exportFitParameters
 
 
     function createDirectoryOrBackupFiles(saveFolderPath;filename="")
@@ -23,15 +24,26 @@ module ExportFunctions
 	  end
     end
 
+	"""
+		exportTracesCSV(saveFolderPath, elementNames, compositions, times, traces; average=0,filenameAddition="")
+
+		Exports the traces and compositions as two separate files in a simple tab-delimited format. 
+		The function takes as input the folder path to save the files, element names, compositions, times and traces. 
+		Optional parameters include an averaging window for the traces and a filename addition for distinguishing different exports. 
+		The function creates two files: "ptr3compositions_(filenameAddition).txt" containing the compositional information and "ptr3traces_(filenameAddition).csv" containing the time series of the traces. 
+		The compositions file includes columns for mass, sum formula and elemental composition, while the traces file includes time and the corresponding trace values for each composition.
+		
+		See also "exportTracesCSV_CLOUD" and "CLOUDheader" for exporting in the standardized CLOUD format with metadata headers!
+	"""
 	function exportTracesCSV(saveFolderPath, elementNames, compositions, times, traces; average=0,filenameAddition="")
-	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions$(filenameAddition).txt")
-	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces$(filenameAddition).csv")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions_$(filenameAddition).txt")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces_$(filenameAddition).csv")
 	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions)
-	  f = open(joinpath(saveFolderPath,"ptr3compositions$(filenameAddition).txt"), "w")
+	  f = open(joinpath(saveFolderPath,"ptr3compositions_$(filenameAddition).txt"), "w")
 	  writedlm(f, hcat(["Mass" "SumFormula"],reshape(elementNames,(1,length(elementNames)))))
 	  writedlm(f, hcat(MasslistFunctions.massFromCompositionArrayList(compositions),sumformulas , compositions'))
 	  close(f)
-	  f = open(joinpath(saveFolderPath,"ptr3traces$(filenameAddition).csv"), "w")
+	  f = open(joinpath(saveFolderPath,"ptr3traces_$(filenameAddition).csv"), "w")
 	  writedlm(f, hcat(["Time"], reshape(sumformulas,(1,length(sumformulas)))))
 	  if (average==0)
 	    writedlm(f, hcat(times ,traces))
@@ -41,8 +53,17 @@ module ExportFunctions
 	  close(f)
 	end
 
+	"""
+		CLOUDheader(times; title = "", level=1,version="01",authorname_mail="Name, Vorname email@uibk.ac.at", units="ppt",
+				addcomment="", threshold=1)
+
+		automated CLOUDheader generator. 
+		Returns a tuple of two strings: (cloudheader_traces, cloudheader_compositions) that can be used as headers for the traces and compositions files, respectively, when exporting CLOUD data in the standardized format. 
+		The header includes metadata such as date, title, version, author information, time format, start and end times of the measurement, column delimiters and units, and comments about the data. 
+	"""
 	function CLOUDheader(times; title = "", level=1,version="01",authorname_mail="Name, Vorname email@uibk.ac.at", units="ppt",
-				addcomment="", threshold=1, nrrows_addcomment = 0)
+				addcomment="", threshold=1)
+		nrrows_addcomment = length(split(addcomment, "\n"))
 		cloudheader_traces = string("number of header rows:\t",14+nrrows_addcomment,"\n",
 				"date:\t",today(),"\n",
 				"title:\ttraces of ",title,"\n",
@@ -56,7 +77,7 @@ module ExportFunctions
 				"institution:\t","University of Innsbruck","\n",
 				"column delimiter:\t","tab","\n",
 				"column units:\t",units,"\n",
-				"comment:\tTraces of detected ions here. Compositions, masses and transmission factors in correspondingly named file *_compositions.csv ","\n", addcomment
+				"comment:\tTraces of detected ions here. Compositions, masses and transmission factors in correspondingly named file *_compositions.csv ","\n", addcomment, "\n"
 				)
 		cloudheader_compositions = string("number of header rows:\t11\n",
 				"date:\t",today(),"\n",
@@ -68,17 +89,26 @@ module ExportFunctions
 				"institution:\t","University of Innsbruck","\n",
 				"column delimiter:\t","tab","\n",
 				"column units:\t","masses of the ions in amu; transmission factor and composition unitless","\n",
-				"comment:\tCompositions, masses and transmission factors here. Traces in correspondingly named file *_traces.csv. Compounds are filtered by (signal-BG) > ",threshold," sigma of BG. \n"
+				"comment:\tCompositions, masses and transmission factors here. Traces and further comments in correspondingly named file *_traces.csv. Compounds are filtered by (signal-BG) > ",threshold," sigma of BG. \n"
 				)
 
 		return (cloudheader_traces, cloudheader_compositions)
 	end
     
-	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, additionalColumns=DataFrame(), headers = ("",""), ion = "H+", average=0,filenameAddition="_CLOUDheader")
-	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions$(filenameAddition).txt")
-	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces$(filenameAddition).csv")
+	"""
+		exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, additionalColumns=DataFrame(), headers = ("",""), ion = "H+", average=0,filenameAddition="CLOUDheader")
+
+		Exports the traces and compositions in the standardized CLOUD format. 
+		The function takes as input the folder path to save the files, element names, masses, compositions, times and traces. 
+		Optional parameters include transmission factors, additional columns for the compositions file, headers for both files (use the header generator ExportFunctions.CLOUDheader!!), ion type for sum formula generation, averaging window for the traces and a filename addition for distinguishing different exports. 
+		The function creates two files: "ptr3compositions_(filenameAddition).txt" containing the compositional information and "ptr3traces_(filenameAddition).csv" containing the time series of the traces. 
+		The headers can be generated using the CLOUDheader function to ensure consistency with the CLOUD data format standards.
+	"""
+	function exportTracesCSV_CLOUD(saveFolderPath, elementNames, masses, compositions, times, traces; transmission =0, additionalColumns=DataFrame(), headers = ("",""), ion = "H+", average=0,filenameAddition="CLOUDheader")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3compositions_$(filenameAddition).txt")
+	  createDirectoryOrBackupFiles(saveFolderPath;filename="ptr3traces_$(filenameAddition).csv")
 	  sumformulas = MasslistFunctions.sumFormulaStringListFromCompositionArrayList(compositions; elements=elementNames, ion = ion)
-	  f = open(joinpath(saveFolderPath,"ptr3compositions$(filenameAddition).txt"), "w")
+	  f = open(joinpath(saveFolderPath,"ptr3compositions_$(filenameAddition).txt"), "w")
 	  write(f, headers[2])
 	  if (transmission != 0) & (size(additionalColumns) == (0,0))
 	  	DelimitedFiles.writedlm(f, hcat(reshape(elementNames,(1,length(elementNames))),["Mass" "SumFormula" "InletTransmission"],))
@@ -94,7 +124,7 @@ module ExportFunctions
 	  	DelimitedFiles.writedlm(f, hcat(compositions', round.(masses, digits=5), sumformulas))
 	  end
 	  close(f)
-	  f = open(joinpath(saveFolderPath,"ptr3traces$(filenameAddition).csv"), "w")
+	  f = open(joinpath(saveFolderPath,"ptr3traces_$(filenameAddition).csv"), "w")
 	  write(f, headers[1])
 	  writedlm(f, hcat(["Time" "unixTime"], reshape(sumformulas,(1,length(sumformulas)))))
 	  if (average==0)
@@ -105,6 +135,7 @@ module ExportFunctions
 	  end
 	  close(f)
 	end
+
 
 
 	function exportFitParameters(saveasfilename,fitparams, fitparamerrs, masses, compositions; fitfunction = "")

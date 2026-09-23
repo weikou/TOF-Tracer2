@@ -300,14 +300,15 @@ module InterpolationFunctions
 =#
 
 """
-	missingcor(x,y)
+	nancor(x,y)
 
-Returns the correlation between two vectors x and y, ignoring missing values.
+Returns the correlation between two vectors x and y, ignoring missing or nan values.
 """
-function missingcor(x,y)
-    mask = .!(ismissing.(x) .| ismissing.(y))
+function nancor(x,y)
+    mask = .!(ismissing.(x) .| ismissing.(y) .| isnan.(x) .| isnan.(y))
     return Statistics.cor(x[mask], y[mask])
 end
+
 
     """
         nanmean(x::AbstractArray)
@@ -353,6 +354,29 @@ end
 		return mapslices(nanmedian,x;dims = dims)
 	end
 
+	"""
+		nanquantile(x::AbstractArray, q::Real)
+
+		returns the quantile over the given array, thereby ignoring nans(!)
+	"""
+	function nanquantile(x::Vector, q::Real)
+		if length(filter(!isnan, x)) > 0
+			return Statistics.quantile(filter(!isnan,x),q)
+		elseif length(filter(!isnan, x)) == 0
+			return NaN
+		end
+	end
+	
+	"""
+		nanquantile(x::Matrix, q::Real;dims=1)
+
+		returns the quantile over the given matrix dimension, thereby ignoring nans, except the whole subarray is nans
+	"""
+	function nanquantile(x::Matrix, q::Real;dims=1)
+		return mapslices(y -> nanquantile(y,q),x;dims = dims)
+	end
+
+	
     """
         nanstd(x::Matrix;dims=1)
     returns the standard deviation over the given array, thereby ignoring nans, except the whole array is nans
@@ -604,7 +628,11 @@ end
             end
             if calcStdev
                 df = DataFrames.outerjoin(data_mean, data_stdv, on = data_timelabel)
-				return DataFrames.outerjoin(df, data_median,on = data_timelabel)
+				if calcMedian
+					return DataFrames.outerjoin(df, data_median,on = data_timelabel)
+				else
+					return df
+				end
             else
                 return data_mean
             end
@@ -612,9 +640,9 @@ end
             println("Ensure, that your time array is on the left hand side of your data array and that your timelabel is correct.")
         end
     end
-#=
+
     """
-        calculateStageMeans(stagestimes::Array{DateTime,1}, data::DataFrame; data_timelabel="Time",ignoreNaNs=false,calcMedian=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
+        calculateStageMeans(stagestimes::Array{DateTime,1}, data::Matrix, times::Vector; data_timelabel="Time",ignoreNaNs=false,calcMedian=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
 
     Arguments
     - stagestimes: an array or dataframe column containing the stage times
@@ -647,19 +675,25 @@ end
             end
             if ignoreNaNs
                 a_mean = nanmean(Matrix(a);dims=1)
-                a_median = nanmedian(Matrix(a);dims=1)
+				if calcMedian
+                	a_median = nanmedian(Matrix(a);dims=1)
+				end
                 if calcStdev
                     a_stdv = nanstd(Matrix(a);dims=1)
                 end
             else
                 a_mean = Statistics.mean(Matrix(a);dims=1)
-                a_median = Statistics.median(Matrix(a);dims=1)
+				if calcMedian
+                	a_median = Statistics.median(Matrix(a);dims=1)
+				end
                 if calcStdev
                     a_stdv = Statistics.std(Matrix(a);dims=1)
                 end
             end
             data_mean[i,:] = a_mean
-            data_median[i,:] = a_median
+			if calcMedian
+            	data_median[i,:] = a_median
+			end
             if calcStdev
                 data_stdv[i,:] = a_stdv
             end
@@ -675,6 +709,6 @@ end
             return data_mean
         end
     end
-=#
+
 
 end

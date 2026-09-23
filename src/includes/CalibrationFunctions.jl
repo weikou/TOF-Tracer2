@@ -177,11 +177,11 @@ module CalibrationFunctions
 		fitParameters_Linear(xdata,ydata)
 
 	gives fit parameters for a linear function. \nSee fitParameters(xdata,ydata;functiontype=" ")
+
 	"""
-	function fitParameters_Linear(xdata,ydata)
+	function fitParameters_Linear(xdata,ydata; throughzero = false)
 		pn = [minimum(ydata), 1.0]
 		mn(t, p) = p[1].*t.+p[2]
-
 		fit = curve_fit(mn, xdata, ydata, pn)
 		param = fit.param
 		cov = estimate_covar(fit)
@@ -190,10 +190,20 @@ module CalibrationFunctions
 		return (param,stderror,["linear" fitlabel])
 	end
 
+	function fitParameters_Linear_fixed_b(xdata,ydata; b=0)
+		pn = [minimum(ydata)]
+		mn(t, p) = p[1].*t .+ b
+		fit = curve_fit(mn, xdata, ydata, pn)
+		param = fit.param
+		cov = estimate_covar(fit)
+		stderror = sqrt.([cov[1,1]])
+		fitlabel =  string(round(param[1],sigdigits=3),"*x+$(b)")
+		return (param,stderror,["linear" fitlabel])
+	end
 	"""
 		fitParameters_Quadratic(xdata,ydata)
 
-	gives fit parameters for a linear function. \nSee fitParameters(xdata,ydata;functiontype=" ")
+	gives fit parameters for a quadratic function. \nSee fitParameters(xdata,ydata;functiontype=" ")
 	"""
 	function fitParameters_Quadratic(xdata,ydata)
 		pn = [0.5, 0.5, 0.5]
@@ -342,6 +352,7 @@ module CalibrationFunctions
 		- exponential: a*exp(-bx)+c
 		- exponential+linear: a*exp(-bx) + c-d*x
 		- linear: ax+b
+		- linear with b fixed: ax (+b)
 		- quadratic: ax² + bx + c
 		- cubic: ax³ + bx² + cx + d
 		- power: ax^b
@@ -353,7 +364,7 @@ module CalibrationFunctions
 	([0.0, 1.0], [0.0, 0.0], ["linear" "0.0+1.0*x"])
 	```
 	"""
-	function fitParameters(xdata,ydata;functiontype="")
+	function fitParameters(xdata,ydata;functiontype="", kwargs...)
 		if functiontype == "double exponential"
 			(param,stderror,fitlabel) = fitParameters_DoubleExponential(xdata,ydata)
 		elseif functiontype == "exponential decay"
@@ -364,6 +375,12 @@ module CalibrationFunctions
 			(param,stderror,fitlabel) = fitParameters_Exponential_Linear(xdata,ydata)
 		elseif functiontype == "linear"
 			(param,stderror,fitlabel) = fitParameters_Linear(xdata,ydata)
+		elseif functiontype == "linear with b fixed"
+			if :b in keys(kwargs)
+				(param,stderror,fitlabel) = fitParameters_Linear_fixed_b(xdata,ydata;b=kwargs[:b])
+			else
+				println("give a value for 'b' to use this function.")
+			end
 		elseif functiontype == "quadratic"
 			(param,stderror,fitlabel) = fitParameters_Quadratic(xdata,ydata)
 		elseif functiontype == "cubic"
@@ -497,7 +514,7 @@ module CalibrationFunctions
 	with the 2 given parameters in the params array.
 	"""
     function LinearFunction(xdata::Vector,params::Vector)
-	    length(params) == 2 || throw(ArgumentError("Invalid length of (parameter array = $(params)), should be 2"))
+		length(params) == 2 || throw(ArgumentError("Invalid length of (parameter array = $(params)), should be 2"))
         res = params[1] .* xdata .+ params[2]
         return res
     end 
@@ -556,7 +573,7 @@ julia> applyFunction(collect(0:0.1:10),[1,2];functiontype="power")
 
 ```
 """
-function applyFunction(xdata::Vector,params;functiontype="")
+function applyFunction(xdata::Vector,params;functiontype="",kwargs...)
     if functiontype == "double exponential"
         result = DoubleExponential(xdata,params)
     elseif functiontype == "exponential decay"
@@ -572,7 +589,14 @@ function applyFunction(xdata::Vector,params;functiontype="")
     elseif functiontype == "logistic"
         result = LogisticFunction(xdata,params)
     elseif functiontype == "linear"
-        result = LinearFunction(xdata,params)
+		if (length(params) == 1) & (:b in keys(kwargs))
+			println("found :b in kwargs! Appending it to params: ")
+			append!(params, kwargs[:b])
+			println(params)
+		elseif (length(params) == 1)
+			println("missing a fixed parameter (:b) given in kwargs.")
+		end
+		result = LinearFunction(xdata,params)
     elseif functiontype == "quadratic"
         result = QuadraticFunction(xdata,params)
     elseif functiontype == "cubic"

@@ -86,7 +86,7 @@
         printstatement = @capture_out IntpF.calculateStageMeans(stagesTimes, data; data_timelabel="time",ignoreNaNs=false,calcStdev=false,lastMinutes=0,firstMinutes=0) 
         @test printstatement == "Ensure, that your time array is on the left hand side of your data array and that your timelabel is correct.\n"
         
-        result = IntpF.calculateStageMeans(stagesTimes, data; data_timelabel="times",ignoreNaNs=false,calcStdev=false,lastMinutes=0,firstMinutes=0)
+        result = IntpF.calculateStageMeans(stagesTimes, data; data_timelabel="times",ignoreNaNs=true,calcStdev=true,calcMedian=true,lastMinutes=0,firstMinutes=0)
         @test isa(result, DataFrame)
         @test length(result.times) == length(stagesTimes)
         @test float.(result.data)[1:end-1] == 24 .* collect(0:1:length(result.data)-2) .+ 12.5

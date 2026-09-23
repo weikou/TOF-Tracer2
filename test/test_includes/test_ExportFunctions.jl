@@ -20,24 +20,24 @@
               catch
                 false
               end
-        @test isfile(joinpath(fp,"export1","ptr3compositions.txt"))  
-        @test isfile(joinpath(fp,"export1","ptr3traces.csv"))  
+        @test isfile(joinpath(fp,"export1","ptr3compositions_.txt"))  
+        @test isfile(joinpath(fp,"export1","ptr3traces_.csv"))  
         ExpF.exportTracesCSV(joinpath(fp,"export1"), mRes.MasslistElements, mRes.MasslistCompositions, mRes.Times, mRes.Traces; average=0)
-        @test isfile(joinpath(fp,"export1","ptr3compositions.txt.bak"))  
-        @test isfile(joinpath(fp,"export1","ptr3traces.csv.bak"))  
-        @test isfile(joinpath(fp,"export1","ptr3compositions.txt"))  
-        @test isfile(joinpath(fp,"export1","ptr3traces.csv"))  
-        @test filesize(joinpath(fp,"export1","ptr3traces.csv")) > 0
-        @test filesize(joinpath(fp,"export1","ptr3compositions.txt")) > 0
-        @test filesize(joinpath(fp,"export1","ptr3traces.csv")) > 0
-        rm(joinpath(fp,"export1","ptr3traces.csv.bak"))
-        rm(joinpath(fp,"export1","ptr3compositions.txt.bak"))  
+        @test isfile(joinpath(fp,"export1","ptr3compositions_.txt.bak"))  
+        @test isfile(joinpath(fp,"export1","ptr3traces_.csv.bak"))  
+        @test isfile(joinpath(fp,"export1","ptr3compositions_.txt"))  
+        @test isfile(joinpath(fp,"export1","ptr3traces_.csv"))  
+        @test filesize(joinpath(fp,"export1","ptr3traces_.csv")) > 0
+        @test filesize(joinpath(fp,"export1","ptr3compositions_.txt")) > 0
+        @test filesize(joinpath(fp,"export1","ptr3traces_.csv")) > 0
+        rm(joinpath(fp,"export1","ptr3traces_.csv.bak"))
+        rm(joinpath(fp,"export1","ptr3compositions_.txt.bak"))  
 	end
-	
+    
 	@testset "exportTracesCSV_CLOUD" begin
         tracesheader, compositionsheader = ExpF.CLOUDheader(mRes.Times; title = "test data", level=1,version="01",
 	        authorname_mail="Name, Vorname email@uibk.ac.at", units="cps",
-	        addcomment="these data have not been corrected in any way.\n", threshold=1, nrrows_addcomment = 1)
+	        addcomment="these data have not been corrected in any way.", threshold=1)
 	    @test count("\n",tracesheader) == parse(Int64,split(split(tracesheader,"\t";limit =2)[2],"\n";limit=2)[1])
 	    @test count("\n",compositionsheader) == parse(Int64,split(split(compositionsheader,"\t";limit =2)[2],"\n";limit=2)[1])
 
@@ -56,7 +56,7 @@
         
         @test try ExpF.exportTracesCSV_CLOUD(joinpath(fp,"export1"), 
 	        mRes.MasslistElements, mRes.MasslistMasses, mRes.MasslistCompositions, mRes.Times, mRes.Traces; 
-	        transmission=ones(length(mRes.MasslistMasses)), headers = (tracesheader, compositionsheader), ion = "H+", average=0,filenameAddition="_transmission_CLOUD")
+	        transmission=ones(length(mRes.MasslistMasses)), headers = (tracesheader, compositionsheader), ion = "H+", average=0,filenameAddition="transmission_CLOUD")
 	            true
               catch
                 false
