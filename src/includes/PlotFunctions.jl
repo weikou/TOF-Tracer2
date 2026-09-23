@@ -4,7 +4,7 @@ module PlotFunctions
 	import ..ResultFileFunctions
 	import ..InterpolationFunctions
 	using PyPlot
-    using PyCall    
+    using PyCall   
 	using HDF5
 	using Dates
 	using CSV
@@ -656,6 +656,10 @@ module PlotFunctions
 		
 	expects two arrays: one containing the times (datetime), one containing the stage names
 	axes 
+
+	If working with PythonPlot, instead of PyPlot, axes can be given as an array of PyObjects, which will be updated with the same vertical lines and stage names. 
+	If axes is empty, the current axis will be updated, which might fail when using PythonPlot. 
+	In that case, use axes = [#name_of_your_axis#] as input.
 		
 	"""
 	function plotStages_simple(datetimes, stageNames; axes = [], starttime=DateTime(0),  endtime=DateTime(0), textoffset = 0.75, vlinecolor = "k",fontsize=8)		
@@ -667,28 +671,47 @@ module PlotFunctions
 				(starttime,endtime) = PlotFunctions.matplotlib2datetime.((axes[1]).get_xlim())
 			end
 		show = starttime .< datetimes .< endtime
-		if (length(axes) == 0) & ((starttime == DateTime(0)) & (endtime == DateTime(0)))
-			println("plotting all stages. Please set starttime and endtime, if only a subset of stages should be plotted.")
-			show = trues(length(datetimes))
-		end
-		end
-		if typeof(axes) == Vector{PyObject}
-			for ax in axes
-				ax.axvline.(datetimes[show], color = vlinecolor)
+			if (length(axes) == 0) & ((starttime == DateTime(0)) & (endtime == DateTime(0)))
+				println("plotting all stages. Please set starttime and endtime, if only a subset of stages should be plotted.")
+				show = trues(length(datetimes))
 			end
-			axes[1].text.(datetimes[show], #+Dates.Minute(5),
-		            axes[1].get_ylim()[1] + 0.9*(axes[1].get_ylim()[2] - axes[1].get_ylim()[1]),
-		            stageNames[show],
-		            rotation=90,fontsize=fontsize, va="top")
-		else 
-			if (length(axes) == 0)
-				axes = gca()
+		end
+		if axes isa Vector
+			if length(axes) > 0
+				for ax in axes
+					ax.axvline.(datetimes[show], color = vlinecolor)
+				end
+				if typeof(axes) == Vector{PyObject}
+					println("using the datetime limits of the first given axis in the array for text plotting.")
+					axes[1].text.(datetimes[show], #+Dates.Minute(5),
+						axes[1].get_ylim()[1] + 0.9*(axes[1].get_ylim()[2] - axes[1].get_ylim()[1]),
+						stageNames[show],
+						rotation=90,fontsize=fontsize, va="top")
+				else
+					println("using the datetime limits of the first given axis in the array for text plotting.")
+					try
+						axes[1].text.(datetimes[show], #+Dates.Minute(5),
+							axes[1].get_ylim()[0] + 0.9*(axes[1].get_ylim()[1] - axes[1].get_ylim()[1]),
+							stageNames[show],
+							rotation=90,fontsize=fontsize, va="top")
+					catch e
+						println("Check, if the given 'axes' is a list of actual axes.")
+					end
+				end
+			elseif (length(axes) == 0) # bug, when axes is a Py (from PythonPlot). only works for PyObject axis
+					axes = gca()
+					axes.axvline.(datetimes[show], color = vlinecolor)
+					axes.text.(datetimes[show], #+Dates.Minute(5),
+						axes.get_ylim()[1] + 0.9*(axes.get_ylim()[2] - axes.get_ylim()[1]),
+						stageNames[show],
+						rotation=90,fontsize=fontsize, va="top")
 			end
+		elseif axes isa PyObject
 			axes.axvline.(datetimes[show], color = vlinecolor)
 			axes.text.(datetimes[show], #+Dates.Minute(5),
-		            axes.get_ylim()[1] + 0.9*(axes.get_ylim()[2] - axes.get_ylim()[1]),
-		            stageNames[show],
-		            rotation=90,fontsize=fontsize, va="top")
+						axes.get_ylim()[1] + 0.9*(axes.get_ylim()[2] - axes.get_ylim()[1]),
+						stageNames[show],
+						rotation=90,fontsize=fontsize, va="top")
 		end
 	end
 	
