@@ -121,7 +121,6 @@ import TOFTracer2.ResultFileFunctions as ResFF
 			smoothing = 1,
 			backgroundSubstractionMode = 0,
 			bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
-			isobarToPlot = 0,
 			plotsymbol = ".-",
 			timeFrame2plot=(DateTime(0),DateTime(3000)),
 			timezone = "UTC",

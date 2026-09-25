@@ -370,7 +370,7 @@ module PlotFunctions
 
 		fig=figure()
 		ax = subplot(subplotlayout)
-		semilogy(Dates.unix2datetime.(InterpolationFunctions.averageSamples(Dates.datetime2unix.(measResult.Times), smoothing)),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
+		semilogy(InterpolationFunctions.averageSamples(measResult.Times, smoothing),InterpolationFunctions.averageSamples(bgCorrectedTraces,smoothing), plotsymbol) #linewidth=1)
 		startTimeString = Dates.format(measResult.Times[1],"yyyy/mm/dd")
 		endTimeString = Dates.format(measResult.Times[end],"yyyy/mm/dd")
 		PyPlot.title(string("$startTimeString - $endTimeString", " ", title))
@@ -518,8 +518,6 @@ module PlotFunctions
 			    smoothing = 1,
 			    backgroundSubstractionMode = 0,
 			    bg = (DateTime(2000,1,1,0,0),DateTime(2000,1,1,0,1)),
-				dutycyclecorrect = false,
-			    isobarToPlot = 0,
 			    plotsymbol = ".-",
 			    timeFrame2plot=(DateTime(0),DateTime(3000)),
 			    timezone = "UTC",
@@ -536,8 +534,8 @@ module PlotFunctions
 				smoothing = smoothing,
 			    backgroundSubstractionMode = backgroundSubstractionMode,
 			    bg = bg,
-				dutycyclecorrect = dutycyclecorrect,
-				isobarToPlot = isobarToPlot,
+				dutycyclecorrect = false,
+				isobarToPlot = 0,
 			    plotsymbol = plotsymbol,
 				timeFrame2plot = timeFrame2plot,
 			    timezone = timezone,

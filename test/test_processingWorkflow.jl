@@ -1,5 +1,5 @@
 @testset "processingProject" begin
-    fpfiles = joinpath("..","ExampleFiles")
+	fpfiles = joinpath("..","ExampleFiles")
     fp = joinpath(fpfiles,"TOFDATA")
     print("path to files: ", fp, "\n")
     @test isdir(fp)
@@ -50,6 +50,7 @@
 	    plotControlMass = true,
 	    firstNFiles=0,
 	    lastNFiles = 0,
+		recalibInterval = 60,
 	    filePrecaching = false,
 	    openWholeFile = true,
 	    testRangeStart = 137.0, # the mass shift of this region will be shown if plot control mass is set true. Should not be part of calibRegions

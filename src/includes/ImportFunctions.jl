@@ -44,7 +44,7 @@ function importExportedTraces(fptraces,fpcompositions;nrElements = 8)
     data = DataFrame(CSV.File(fptraces, header = nrheaderlines+1))
     nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
     compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines+1))
-    times = data.Time
+    times = DateTime.(data.Time)
     masslistMasses = values(compdata[!,"Mass"])
     masslistElements = names(compdata)[1:nrElements]
     masslistElementsMasses = [MasslistFunctions.elementsMassesDict[el] for el in masslistElements]

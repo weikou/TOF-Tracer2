@@ -392,7 +392,9 @@ module TOFFunctions
 	  if (m_plotControlMass == true)
 	    indexesExact = TOFFunctions.mass2timebin(crOriginalMasses, m_referenceMassScaleMode, newParams)
 	    crNewInterpolatedValues = InterpolationFunctions.interpolate(indexesExact,spectrum)
-	    PyPlot.plot(crOriginalMasses, crNewInterpolatedValues/maximum(crNewInterpolatedValues),".-")
+		y = crNewInterpolatedValues ./ maximum(crNewInterpolatedValues)
+		PyPlot.plot(crOriginalMasses, y,".-")
+		GC.gc()
 	  end
 	return newParams, success, timebinshifts, intensities
 	end
