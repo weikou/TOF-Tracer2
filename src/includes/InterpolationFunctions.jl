@@ -640,7 +640,7 @@ end
             println("Ensure, that your time array is on the left hand side of your data array and that your timelabel is correct.")
         end
     end
-
+#=
     """
         calculateStageMeans(stagestimes::Array{DateTime,1}, data::Matrix, times::Vector; data_timelabel="Time",ignoreNaNs=false,calcMedian=false,calcStdev=true,lastMinutes=0,firstMinutes=0)
 
@@ -709,6 +709,6 @@ end
             return data_mean
         end
     end
-
+=#
 
 end

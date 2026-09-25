@@ -546,7 +546,7 @@ module CalibrationFunctions
     end   
     
         
-    """
+"""
     applyFunction(xdata,params;functiontype="")
 
 returns a vector, containing the corresponding ydata

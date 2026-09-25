@@ -8,6 +8,11 @@ import ..ResultFileFunctions
 
 export createLicorData_fromFiles, importExportedTraces
 
+"""
+    createLicorData_fromFiles(filepath;filefilter,headerrow,columnNameOfInterest,type_columnOfInterest)
+
+    returns a DataFrame from multiple LICOR data files in a specified directory. The function reads all files matching the given file filter, extracts the datetime and H₂O concentration values, and returns a DataFrame with these values.
+"""
 function createLicorData_fromFiles(filepath :: String;filefilter = r"licor_.*\.txt",headerrow = 2, columnNameOfInterest="H₂O_(mmol_mol⁻¹)",type_columnOfInterest=Float64)
     files = filter(s->occursin(filefilter, s), readdir(filepath))
     nFiles = size(files,1)
@@ -39,6 +44,11 @@ function createLicorData_fromFiles(filepath :: String;filefilter = r"licor_.*\.t
   return df
 end
 
+"""
+    importExportedTraces(fptraces,fpcompositions;nrElements = 8)
+
+    returns a MeasurementResult object from exported traces and compositions files. The function reads the traces and compositions data from the specified files, extracts relevant information, and returns a MeasurementResult object containing the times, mass list, elements, compositions, and traces.
+"""
 function importExportedTraces(fptraces,fpcompositions;nrElements = 8)
     nrheaderlines = parse(Int64,split(readlines(fptraces)[1],"\t")[2])
     data = DataFrame(CSV.File(fptraces, header = nrheaderlines+1))
@@ -53,6 +63,11 @@ function importExportedTraces(fptraces,fpcompositions;nrElements = 8)
 return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces)
 end
 
+"""
+    importExportedTraces_compositionbasedSubset(fptraces,fpcompositions;nrElements = 8,compositionSubset = zeros(Int64,0, nrElements))
+
+    returns a MeasurementResult object from exported traces and compositions files, filtered by a specified subset of compositions. The function reads the traces and compositions data from the specified files, filters the compositions based on the provided subset, and returns a MeasurementResult object containing the times, mass list, elements, filtered compositions, and traces.
+"""
 function importExportedTraces_compositionbasedSubset(fptraces,fpcompositions;nrElements = 8,compositionSubset = zeros(Int64,0, nrElements))
     nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
     compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines+1))
@@ -78,6 +93,11 @@ function importExportedTraces_compositionbasedSubset(fptraces,fpcompositions;nrE
 return ResultFileFunctions.MeasurementResult(times,masslistMasses,masslistElements,masslistElementsMasses,masslistCompositions,traces)
 end
 
+"""
+    importExportedCompositions(fpcompositions;nrElements = 8)
+
+    returns a MeasurementResult object from an exported compositions file. The function reads the compositions data from the specified file, extracts relevant information, and returns a MeasurementResult object containing the times, mass list, elements, compositions, and traces.
+"""
 function importExportedCompositions(fpcompositions;nrElements = 8)
     nrheaderlines = parse(Int64,split(readlines(fpcompositions)[1],"\t")[2])
     compdata = DataFrame(CSV.File(fpcompositions, header = nrheaderlines+1))
